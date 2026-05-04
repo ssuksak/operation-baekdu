@@ -1377,11 +1377,12 @@ function render() {
   drawTerrain();
   drawGrid();
   drawObjectives();
-  [...state.enemies, ...state.allies, state.player].forEach(drawUnit);
+  state.enemies.forEach(drawUnit);
   drawBullets();
   drawEffects();
   drawVisibilityMask();
   drawVisionLighting();
+  [...state.allies, state.player].forEach(drawUnit);
   drawObjectivePointer();
   drawMessage();
   drawOverlay();
