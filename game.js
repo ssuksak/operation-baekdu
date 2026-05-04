@@ -135,7 +135,9 @@ const state = {
   effects: [],
   cover: [],
   terrain: [],
+  supplies: [],
   intel: null,
+  jammer: null,
   extraction: null,
   defendZone: null,
   objectivePhase: "retrieve",
@@ -225,6 +227,10 @@ function getMissionConfig() {
         { type: "hill", x: 1380, y: 230, w: 380, h: 220 },
         { type: "brush", x: 1540, y: 930, w: 240, h: 160 },
       ],
+      supplies: [
+        { x: 610, y: 695, radius: 20, type: "ammo", used: false },
+        { x: 1080, y: 705, radius: 20, type: "med", used: false },
+      ],
       enemies: [
         createUnit(1560, 420, "enemy", "marksman", { color: "#ff8ad8", hp: 85, maxHp: 85 }),
         createUnit(1450, 700, "enemy", "heavy", { color: "#ff845d", hp: 145, maxHp: 145 }),
@@ -234,9 +240,9 @@ function getMissionConfig() {
       extraction: null,
       intel: null,
       phase: "defend",
-      missionClock: 75,
-      wavesRemaining: 4,
-      waveTimer: 10,
+      missionClock: 320,
+      wavesRemaining: 9,
+      waveTimer: 18,
       intro: "전초기지를 사수하고 적의 파상공세를 막아라",
     };
   }
@@ -268,7 +274,12 @@ function getMissionConfig() {
       { type: "brush", x: 1720, y: 540, w: 220, h: 200 },
       { type: "brush", x: 1550, y: 1020, w: 190, h: 120 },
     ],
-      enemies: [
+    supplies: [
+      { x: 520, y: 1010, radius: 20, type: "ammo", used: false },
+      { x: 980, y: 850, radius: 20, type: "med", used: false },
+      { x: 1450, y: 640, radius: 20, type: "ammo", used: false },
+    ],
+    enemies: [
       createUnit(1020, 460, "enemy", "rifleman", {
         color: "#ff7c7c",
         hp: 65,
@@ -295,15 +306,34 @@ function getMissionConfig() {
         patrol: [{ x: 1530, y: 820 }, { x: 1700, y: 900 }],
       }),
       createUnit(1800, 1120, "enemy", "heavy", { color: "#ff845d", hp: 145, maxHp: 145 }),
+      createUnit(680, 980, "enemy", "rifleman", {
+        color: "#ff7c7c",
+        hp: 68,
+        maxHp: 68,
+        patrol: [{ x: 620, y: 1000 }, { x: 760, y: 1060 }],
+      }),
+      createUnit(1120, 900, "enemy", "grenadier", {
+        color: "#ffb05e",
+        hp: 94,
+        maxHp: 94,
+        patrol: [{ x: 1080, y: 860 }, { x: 1180, y: 960 }],
+      }),
+      createUnit(1710, 610, "enemy", "marksman", {
+        color: "#ff8ad8",
+        hp: 82,
+        maxHp: 82,
+        patrol: [{ x: 1660, y: 590 }, { x: 1770, y: 680 }],
+      }),
     ],
     defendZone: null,
     extraction: { x: 180, y: 180, radius: 34 },
     intel: { x: 1620, y: 820, radius: 22, collected: false },
-    phase: "retrieve",
+    jammer: { x: 1080, y: 820, radius: 24, disabled: false },
+    phase: "disableJammer",
     missionClock: 0,
     wavesRemaining: 0,
     waveTimer: 0,
-    intro: "적 경비를 제압하고 정보 자료를 회수하라",
+    intro: "교란기를 파괴하고 정보 자료를 확보한 뒤 탈출하라",
   };
 }
 
@@ -324,7 +354,9 @@ function resetGame() {
   state.enemies = mission.enemies;
   state.cover = mission.cover;
   state.terrain = mission.terrain || [];
+  state.supplies = mission.supplies || [];
   state.intel = mission.intel;
+  state.jammer = mission.jammer || null;
   state.extraction = mission.extraction;
   state.defendZone = mission.defendZone;
   state.bullets = [];
@@ -359,8 +391,10 @@ function updateHud() {
   objectiveTextEl.textContent =
     state.selectedMission === "outpostDefense"
       ? `전초기지 방어 ${Math.max(0, Math.ceil(state.missionClock))}초`
+      : state.objectivePhase === "disableJammer"
+      ? "교란기 파괴"
       : state.objectivePhase === "retrieve"
-      ? "자료 회수 후 탈출"
+      ? "자료 회수"
       : "탈출 지점으로 복귀";
   commandTextEl.textContent =
     state.squadCommand === "follow" ? "집결" : state.squadCommand === "hold" ? "고정" : "돌격";
@@ -693,6 +727,8 @@ function updateAlly(ally, dt, index) {
   if (state.squadCommand === "assault") {
     const pushTarget = state.selectedMission === "outpostDefense"
       ? nearestEnemy(ally, 500) || { x: 760, y: 270 }
+      : state.objectivePhase === "disableJammer"
+      ? state.jammer
       : !state.intel?.collected
       ? state.intel
       : state.extraction || { x: 120, y: 80 };
@@ -862,9 +898,37 @@ function handleInteract() {
     return;
   }
 
+  const supply = state.supplies.find((item) => !item.used && Math.hypot(p.x - item.x, p.y - item.y) < 30);
+  if (supply) {
+    supply.used = true;
+    if (supply.type === "ammo") {
+      p.reserve += 30;
+      setMessage("탄약 보급 완료");
+    } else {
+      [p, ...state.allies].forEach((unit) => {
+        if (unit.hp > 0) unit.hp = Math.min(unit.maxHp, unit.hp + 30);
+      });
+      setMessage("의무 보급품 사용");
+    }
+    updateHud();
+    return;
+  }
+
   if (state.selectedMission === "outpostDefense") return;
 
-  if (!state.intel.collected && Math.hypot(p.x - state.intel.x, p.y - state.intel.y) < 28) {
+  if (state.jammer && !state.jammer.disabled && Math.hypot(p.x - state.jammer.x, p.y - state.jammer.y) < 32) {
+    state.jammer.disabled = true;
+    state.objectivePhase = "retrieve";
+    state.enemies.push(
+      createUnit(1260, 780, "enemy", "rifleman", { color: "#ff7c7c", hp: 74, maxHp: 74 }),
+      createUnit(1340, 760, "enemy", "grenadier", { color: "#ffb05e", hp: 92, maxHp: 92, damage: 20 })
+    );
+    setMessage("교란기 파괴 완료. 자료를 확보하라", 4);
+    updateHud();
+    return;
+  }
+
+  if (state.jammer?.disabled && !state.intel.collected && Math.hypot(p.x - state.intel.x, p.y - state.intel.y) < 28) {
     state.intel.collected = true;
     state.objectivePhase = "extract";
     state.enemies.push(
@@ -915,7 +979,7 @@ function update(dt) {
     state.missionClock = Math.max(0, state.missionClock - dt);
     state.waveTimer -= dt;
     if (state.waveTimer <= 0 && state.wavesRemaining > 0) {
-      state.waveTimer = 14;
+      state.waveTimer = 28;
       state.wavesRemaining -= 1;
       state.enemies.push(
         createUnit(1940, 360 + Math.random() * 120, "enemy", "grenadier", { color: "#ff9c6b", hp: 96, maxHp: 96, damage: 18 }),
@@ -1017,6 +1081,23 @@ function drawObjectives() {
     ctx.beginPath();
     ctx.arc(state.defendZone.x - state.camera.x, state.defendZone.y - state.camera.y, state.defendZone.radius, 0, Math.PI * 2);
     ctx.stroke();
+  }
+
+  state.supplies.forEach((supply) => {
+    if (supply.used || !isVisibleToSquad(supply)) return;
+    ctx.fillStyle = supply.type === "ammo" ? "#89b4ff" : "#8fffb0";
+    ctx.beginPath();
+    ctx.arc(supply.x - state.camera.x, supply.y - state.camera.y, supply.radius, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  if (state.jammer && !state.jammer.disabled && isVisibleToSquad(state.jammer)) {
+    ctx.fillStyle = "#ffb3cf";
+    ctx.beginPath();
+    ctx.arc(state.jammer.x - state.camera.x, state.jammer.y - state.camera.y, state.jammer.radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#5e2640";
+    ctx.fillRect(state.jammer.x - state.camera.x - 8, state.jammer.y - state.camera.y - 14, 16, 28);
   }
 
   if (state.intel && !state.intel.collected && isVisibleToSquad(state.intel)) {
