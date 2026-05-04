@@ -1029,6 +1029,78 @@ function drawGrid() {
   }
 }
 
+function drawRoundedRect(x, y, w, h, r, fill, stroke = null) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+  ctx.fillStyle = fill;
+  ctx.fill();
+  if (stroke) {
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+}
+
+function drawCoverVisual(c) {
+  const x = c.x - state.camera.x;
+  const y = c.y - state.camera.y;
+
+  if (c.type === "building") {
+    drawRoundedRect(x, y, c.w, c.h, 10, "#8a949e", "#d7dfe6");
+    drawRoundedRect(x + 8, y + 8, c.w - 16, c.h - 16, 8, "#6f7881");
+    ctx.fillStyle = "rgba(210,230,255,0.28)";
+    for (let row = 0; row < Math.max(1, Math.floor(c.h / 48)); row++) {
+      for (let col = 0; col < Math.max(1, Math.floor(c.w / 42)); col++) {
+        ctx.fillRect(x + 14 + col * 34, y + 14 + row * 28, 14, 10);
+      }
+    }
+    return;
+  }
+
+  if (c.type === "sandbag") {
+    drawRoundedRect(x, y, c.w, c.h, 8, "#bea978", "#e4d1a2");
+    ctx.strokeStyle = "rgba(100,75,35,0.45)";
+    for (let i = 1; i < Math.floor(c.w / 18); i++) {
+      const sx = x + i * 18;
+      ctx.beginPath();
+      ctx.moveTo(sx, y + 4);
+      ctx.lineTo(sx, y + c.h - 4);
+      ctx.stroke();
+    }
+    return;
+  }
+
+  if (c.type === "wall") {
+    drawRoundedRect(x, y, c.w, c.h, 5, "#9f8e85", "#d7c4b8");
+    ctx.strokeStyle = "rgba(255,255,255,0.18)";
+    ctx.beginPath();
+    ctx.moveTo(x, y + c.h / 2);
+    ctx.lineTo(x + c.w, y + c.h / 2);
+    ctx.stroke();
+    return;
+  }
+
+  if (c.type === "placedCover") {
+    drawRoundedRect(x, y, c.w, c.h, 6, "#d8ae5b", "#f5d17d");
+    return;
+  }
+
+  drawRoundedRect(x, y, c.w, c.h, 12, "#85906f", "#c7d3b1");
+  ctx.fillStyle = "rgba(255,255,255,0.10)";
+  ctx.beginPath();
+  ctx.ellipse(x + c.w * 0.35, y + c.h * 0.35, c.w * 0.18, c.h * 0.16, 0, 0, Math.PI * 2);
+  ctx.fill();
+}
+
 function drawTerrain() {
   ctx.fillStyle = "#466853";
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
@@ -1052,12 +1124,7 @@ function drawTerrain() {
   });
 
   state.cover.forEach((c) => {
-    if (c.type === "building") ctx.fillStyle = "#7f8a94";
-    else if (c.type === "sandbag") ctx.fillStyle = "#b69f74";
-    else if (c.type === "placedCover") ctx.fillStyle = "#d8ae5b";
-    else if (c.type === "wall") ctx.fillStyle = "#9a8a7f";
-    else ctx.fillStyle = "#83906e";
-    ctx.fillRect(c.x - state.camera.x, c.y - state.camera.y, c.w, c.h);
+    drawCoverVisual(c);
   });
 }
 
@@ -1078,6 +1145,12 @@ function drawUnit(unit) {
     ctx.beginPath();
     ctx.arc(0, 0, unit.radius + (unit === state.player ? 4 : 2), 0, Math.PI * 2);
     ctx.stroke();
+    if (unit === state.player) {
+      ctx.fillStyle = "#f4ffd2";
+      ctx.beginPath();
+      ctx.arc(0, 0, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
   ctx.fillStyle = "#18211a";
@@ -1214,6 +1287,40 @@ function drawVisibilityMask() {
   ctx.restore();
 }
 
+function drawVisionLighting() {
+  const viewers = [state.player, ...state.allies].filter((u) => u.hp > 0 && !u.downed);
+  viewers.forEach((viewer, index) => {
+    const sx = viewer.x - state.camera.x;
+    const sy = viewer.y - state.camera.y;
+
+    const halo = ctx.createRadialGradient(sx, sy, 12, sx, sy, index === 0 ? 250 : 150);
+    halo.addColorStop(0, index === 0 ? "rgba(255,255,220,0.28)" : "rgba(220,255,220,0.14)");
+    halo.addColorStop(0.45, index === 0 ? "rgba(255,255,220,0.12)" : "rgba(220,255,220,0.08)");
+    halo.addColorStop(1, "rgba(255,255,220,0)");
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(sx, sy, index === 0 ? 250 : 150, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (index === 0) {
+      ctx.save();
+      ctx.translate(sx, sy);
+      ctx.rotate(viewer.angle);
+      const beam = ctx.createRadialGradient(0, 0, 20, 0, 0, 360);
+      beam.addColorStop(0, "rgba(255,250,210,0.18)");
+      beam.addColorStop(0.4, "rgba(255,245,200,0.10)");
+      beam.addColorStop(1, "rgba(255,245,200,0)");
+      ctx.fillStyle = beam;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, 360, -0.62, 0.62);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+  });
+}
+
 function drawMessage() {
   if (state.messageTimer <= 0) return;
   ctx.fillStyle = "rgba(5,8,10,0.72)";
@@ -1274,6 +1381,7 @@ function render() {
   drawBullets();
   drawEffects();
   drawVisibilityMask();
+  drawVisionLighting();
   drawObjectivePointer();
   drawMessage();
   drawOverlay();
