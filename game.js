@@ -20,8 +20,8 @@ const stickKnob = moveStick.querySelector(".stick-knob");
 
 const WIDTH = canvas.width;
 const HEIGHT = canvas.height;
-const WORLD_WIDTH = 2200;
-const WORLD_HEIGHT = 1400;
+const WORLD_WIDTH = 4200;
+const WORLD_HEIGHT = 2800;
 
 const classConfigs = {
   rifleman: {
@@ -204,39 +204,45 @@ function getMissionConfig() {
   if (state.selectedMission === "outpostDefense") {
     return {
       objectiveText: "전초기지를 방어하라",
-      playerSpawn: { x: 520, y: 700 },
+      playerSpawn: { x: 980, y: 1500 },
       allySpawns: [
-        { x: 470, y: 740, color: "#86f096" },
-        { x: 520, y: 780, color: "#72dcff" },
-        { x: 570, y: 735, color: "#ffc76d" },
+        { x: 920, y: 1540, color: "#86f096" },
+        { x: 980, y: 1580, color: "#72dcff" },
+        { x: 1040, y: 1535, color: "#ffc76d" },
       ],
       cover: [
-        makeRect(420, 585, 150, 26, "sandbag"),
-        makeRect(420, 812, 150, 26, "sandbag"),
-        makeRect(650, 565, 110, 28, "wall"),
-        makeRect(650, 824, 110, 28, "wall"),
-        makeRect(920, 470, 160, 36, "rock"),
-        makeRect(920, 920, 160, 36, "rock"),
-        makeRect(1200, 600, 200, 130, "building"),
-        makeRect(1360, 760, 120, 120, "building"),
+        makeRect(850, 1360, 180, 28, "sandbag"),
+        makeRect(850, 1625, 180, 28, "sandbag"),
+        makeRect(1140, 1340, 120, 30, "wall"),
+        makeRect(1140, 1640, 120, 30, "wall"),
+        makeRect(1520, 1190, 180, 42, "rock"),
+        makeRect(1520, 1830, 180, 42, "rock"),
+        makeRect(1900, 1450, 220, 140, "building"),
+        makeRect(2200, 1280, 160, 160, "building"),
+        makeRect(2380, 1650, 180, 180, "building"),
       ],
       terrain: [
-        { type: "hill", x: 150, y: 180, w: 560, h: 270 },
-        { type: "brush", x: 760, y: 230, w: 240, h: 140 },
-        { type: "brush", x: 800, y: 980, w: 220, h: 120 },
-        { type: "hill", x: 1380, y: 230, w: 380, h: 220 },
-        { type: "brush", x: 1540, y: 930, w: 240, h: 160 },
+        { type: "hill", x: 260, y: 700, w: 820, h: 420 },
+        { type: "road", x: 1040, y: 1440, w: 2450, h: 120 },
+        { type: "brush", x: 1280, y: 920, w: 320, h: 220 },
+        { type: "brush", x: 1520, y: 1810, w: 340, h: 200 },
+        { type: "hill", x: 2040, y: 740, w: 540, h: 280 },
+        { type: "brush", x: 2740, y: 920, w: 360, h: 220 },
+        { type: "hill", x: 3050, y: 1520, w: 680, h: 360 },
+        { type: "brush", x: 3320, y: 1960, w: 260, h: 180 },
       ],
       supplies: [
-        { x: 610, y: 695, radius: 20, type: "ammo", used: false },
-        { x: 1080, y: 705, radius: 20, type: "med", used: false },
+        { x: 1240, y: 1490, radius: 20, type: "ammo", used: false },
+        { x: 2150, y: 1510, radius: 20, type: "med", used: false },
       ],
       enemies: [
-        createUnit(1560, 420, "enemy", "marksman", { color: "#ff8ad8", hp: 85, maxHp: 85 }),
-        createUnit(1450, 700, "enemy", "heavy", { color: "#ff845d", hp: 145, maxHp: 145 }),
-        createUnit(1580, 1020, "enemy", "grenadier", { color: "#ffb05e", hp: 95, maxHp: 95, damage: 20 }),
+        createUnit(2350, 1160, "enemy", "marksman", { color: "#ff8ad8", hp: 85, maxHp: 85 }),
+        createUnit(2500, 1500, "enemy", "heavy", { color: "#ff845d", hp: 145, maxHp: 145 }),
+        createUnit(2410, 1870, "enemy", "grenadier", { color: "#ffb05e", hp: 95, maxHp: 95, damage: 20 }),
+        createUnit(3320, 1130, "enemy", "marksman", { color: "#ff8ad8", hp: 82, maxHp: 82 }),
+        createUnit(3480, 1700, "enemy", "grenadier", { color: "#ffb05e", hp: 92, maxHp: 92, damage: 20 }),
       ],
-      defendZone: { x: 530, y: 705, radius: 108 },
+      defendZone: { x: 995, y: 1505, radius: 138 },
       extraction: null,
       intel: null,
       phase: "defend",
@@ -249,86 +255,95 @@ function getMissionConfig() {
 
   return {
       objectiveText: "자료 회수 후 탈출",
-    playerSpawn: { x: 220, y: 1160 },
+    playerSpawn: { x: 360, y: 2250 },
     allySpawns: [
-      { x: 180, y: 1105, color: "#86f096" },
-      { x: 240, y: 1095, color: "#72dcff" },
-      { x: 300, y: 1140, color: "#ffc76d" },
+      { x: 300, y: 2195, color: "#86f096" },
+      { x: 380, y: 2190, color: "#72dcff" },
+      { x: 450, y: 2235, color: "#ffc76d" },
     ],
     cover: [
-      makeRect(330, 1030, 90, 26, "sandbag"),
-      makeRect(540, 900, 120, 34, "rock"),
-      makeRect(760, 780, 130, 26, "wall"),
-      makeRect(1010, 970, 100, 30, "sandbag"),
-      makeRect(1380, 380, 160, 160, "building"),
-      makeRect(1530, 710, 180, 190, "building"),
-      makeRect(1180, 1130, 130, 32, "rock"),
-      makeRect(860, 560, 110, 110, "building"),
-      makeRect(1240, 600, 80, 150, "wall"),
+      makeRect(560, 2080, 140, 32, "sandbag"),
+      makeRect(940, 1880, 170, 42, "rock"),
+      makeRect(1280, 1700, 220, 34, "wall"),
+      makeRect(1710, 1860, 130, 38, "sandbag"),
+      makeRect(2210, 900, 240, 220, "building"),
+      makeRect(2780, 1320, 260, 240, "building"),
+      makeRect(3260, 1200, 180, 42, "rock"),
+      makeRect(1540, 1180, 160, 160, "building"),
+      makeRect(2400, 1100, 90, 220, "wall"),
+      makeRect(3440, 1500, 210, 170, "building"),
     ],
     terrain: [
-      { type: "hill", x: 100, y: 920, w: 540, h: 280 },
-      { type: "brush", x: 620, y: 1030, w: 220, h: 120 },
-      { type: "brush", x: 930, y: 720, w: 250, h: 150 },
-      { type: "hill", x: 1220, y: 180, w: 520, h: 260 },
-      { type: "brush", x: 1720, y: 540, w: 220, h: 200 },
-      { type: "brush", x: 1550, y: 1020, w: 190, h: 120 },
+      { type: "hill", x: 80, y: 1850, w: 980, h: 460 },
+      { type: "road", x: 900, y: 1880, w: 2500, h: 130 },
+      { type: "brush", x: 1050, y: 2040, w: 360, h: 200 },
+      { type: "brush", x: 1620, y: 1560, w: 420, h: 230 },
+      { type: "hill", x: 2220, y: 360, w: 980, h: 440 },
+      { type: "brush", x: 3140, y: 1030, w: 360, h: 250 },
+      { type: "brush", x: 3420, y: 1820, w: 260, h: 220 },
+      { type: "water", x: 1880, y: 2140, w: 920, h: 180 },
     ],
     supplies: [
-      { x: 520, y: 1010, radius: 20, type: "ammo", used: false },
-      { x: 980, y: 850, radius: 20, type: "med", used: false },
-      { x: 1450, y: 640, radius: 20, type: "ammo", used: false },
+      { x: 860, y: 1960, radius: 20, type: "ammo", used: false },
+      { x: 1940, y: 1710, radius: 20, type: "med", used: false },
+      { x: 2860, y: 1430, radius: 20, type: "ammo", used: false },
     ],
     enemies: [
-      createUnit(1020, 460, "enemy", "rifleman", {
+      createUnit(1560, 1040, "enemy", "rifleman", {
         color: "#ff7c7c",
         hp: 65,
         maxHp: 65,
-        patrol: [{ x: 960, y: 470 }, { x: 1120, y: 460 }],
+        patrol: [{ x: 1480, y: 1080 }, { x: 1660, y: 1020 }],
       }),
-      createUnit(1440, 410, "enemy", "marksman", {
+      createUnit(2380, 820, "enemy", "marksman", {
         color: "#ff8ad8",
         hp: 82,
         maxHp: 82,
-        patrol: [{ x: 1400, y: 390 }, { x: 1530, y: 470 }],
+        patrol: [{ x: 2320, y: 760 }, { x: 2510, y: 900 }],
       }),
-      createUnit(1240, 770, "enemy", "grenadier", {
+      createUnit(2100, 1540, "enemy", "grenadier", {
         color: "#ffb05e",
         hp: 95,
         maxHp: 95,
         damage: 20,
-        patrol: [{ x: 1170, y: 720 }, { x: 1320, y: 840 }],
+        patrol: [{ x: 2000, y: 1470 }, { x: 2200, y: 1650 }],
       }),
-      createUnit(1610, 830, "enemy", "rifleman", {
+      createUnit(2890, 1500, "enemy", "rifleman", {
         color: "#ff7c7c",
         hp: 70,
         maxHp: 70,
-        patrol: [{ x: 1530, y: 820 }, { x: 1700, y: 900 }],
+        patrol: [{ x: 2810, y: 1440 }, { x: 3000, y: 1610 }],
       }),
-      createUnit(1800, 1120, "enemy", "heavy", { color: "#ff845d", hp: 145, maxHp: 145 }),
-      createUnit(680, 980, "enemy", "rifleman", {
+      createUnit(3500, 1820, "enemy", "heavy", { color: "#ff845d", hp: 145, maxHp: 145 }),
+      createUnit(1140, 2010, "enemy", "rifleman", {
         color: "#ff7c7c",
         hp: 68,
         maxHp: 68,
-        patrol: [{ x: 620, y: 1000 }, { x: 760, y: 1060 }],
+        patrol: [{ x: 1050, y: 2000 }, { x: 1260, y: 2100 }],
       }),
-      createUnit(1120, 900, "enemy", "grenadier", {
+      createUnit(1760, 1830, "enemy", "grenadier", {
         color: "#ffb05e",
         hp: 94,
         maxHp: 94,
-        patrol: [{ x: 1080, y: 860 }, { x: 1180, y: 960 }],
+        patrol: [{ x: 1680, y: 1780 }, { x: 1870, y: 1920 }],
       }),
-      createUnit(1710, 610, "enemy", "marksman", {
+      createUnit(3210, 1210, "enemy", "marksman", {
         color: "#ff8ad8",
         hp: 82,
         maxHp: 82,
-        patrol: [{ x: 1660, y: 590 }, { x: 1770, y: 680 }],
+        patrol: [{ x: 3160, y: 1160 }, { x: 3320, y: 1320 }],
+      }),
+      createUnit(3740, 1280, "enemy", "rifleman", {
+        color: "#ff7c7c",
+        hp: 72,
+        maxHp: 72,
+        patrol: [{ x: 3680, y: 1220 }, { x: 3860, y: 1380 }],
       }),
     ],
     defendZone: null,
-    extraction: { x: 180, y: 180, radius: 34 },
-    intel: { x: 1620, y: 820, radius: 22, collected: false },
-    jammer: { x: 1080, y: 820, radius: 24, disabled: false },
+    extraction: { x: 260, y: 260, radius: 40 },
+    intel: { x: 3620, y: 1380, radius: 26, collected: false },
+    jammer: { x: 2040, y: 1660, radius: 28, disabled: false },
     phase: "disableJammer",
     missionClock: 0,
     wavesRemaining: 0,
@@ -735,12 +750,12 @@ function updateAlly(ally, dt, index) {
   }
   if (state.squadCommand === "assault") {
     const pushTarget = state.selectedMission === "outpostDefense"
-      ? nearestEnemy(ally, 500) || { x: 760, y: 270 }
+      ? nearestEnemy(ally, 700) || { x: 2200, y: 1500 }
       : state.objectivePhase === "disableJammer"
       ? state.jammer
       : !state.intel?.collected
       ? state.intel
-      : state.extraction || { x: 120, y: 80 };
+      : state.extraction || { x: 260, y: 260 };
     desiredX = pushTarget.x;
     desiredY = pushTarget.y;
   }
@@ -929,8 +944,8 @@ function handleInteract() {
     state.jammer.disabled = true;
     state.objectivePhase = "retrieve";
     state.enemies.push(
-      createUnit(1260, 780, "enemy", "rifleman", { color: "#ff7c7c", hp: 74, maxHp: 74 }),
-      createUnit(1340, 760, "enemy", "grenadier", { color: "#ffb05e", hp: 92, maxHp: 92, damage: 20 })
+      createUnit(2340, 1540, "enemy", "rifleman", { color: "#ff7c7c", hp: 74, maxHp: 74 }),
+      createUnit(2460, 1490, "enemy", "grenadier", { color: "#ffb05e", hp: 92, maxHp: 92, damage: 20 })
     );
     setMessage("교란기 파괴 완료. 자료를 확보하라", 4);
     updateHud();
@@ -941,8 +956,8 @@ function handleInteract() {
     state.intel.collected = true;
     state.objectivePhase = "extract";
     state.enemies.push(
-      createUnit(1940, 520, "enemy", "rifleman", { color: "#ff7c7c", hp: 85, maxHp: 85, damage: 18 }),
-      createUnit(1960, 980, "enemy", "rifleman", { color: "#ff7c7c", hp: 85, maxHp: 85, damage: 18 })
+      createUnit(3220, 980, "enemy", "rifleman", { color: "#ff7c7c", hp: 85, maxHp: 85, damage: 18 }),
+      createUnit(3380, 1760, "enemy", "rifleman", { color: "#ff7c7c", hp: 85, maxHp: 85, damage: 18 })
     );
     setMessage("정보 자료 확보. 탈출 지점으로 복귀하라", 4);
     updateHud();
@@ -1113,6 +1128,24 @@ function drawTerrain() {
       ctx.beginPath();
       ctx.ellipse(sx + zone.w / 2, sy + zone.h / 2, zone.w / 2, zone.h / 2, 0, 0, Math.PI * 2);
       ctx.fill();
+    } else if (zone.type === "road") {
+      drawRoundedRect(sx, sy, zone.w, zone.h, 16, "#7a7568", "#a39d8d");
+      ctx.strokeStyle = "rgba(245,235,190,0.32)";
+      ctx.setLineDash([18, 14]);
+      ctx.beginPath();
+      ctx.moveTo(sx + 22, sy + zone.h / 2);
+      ctx.lineTo(sx + zone.w - 22, sy + zone.h / 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    } else if (zone.type === "water") {
+      drawRoundedRect(sx, sy, zone.w, zone.h, 20, "#3f7ea0", "#7cc0e8");
+      ctx.strokeStyle = "rgba(210,240,255,0.25)";
+      for (let i = 0; i < 4; i++) {
+        ctx.beginPath();
+        ctx.moveTo(sx + 40, sy + 30 + i * 34);
+        ctx.lineTo(sx + zone.w - 40, sy + 30 + i * 34);
+        ctx.stroke();
+      }
     } else if (zone.type === "brush") {
       ctx.fillStyle = "rgba(45, 117, 59, 0.95)";
       ctx.fillRect(sx, sy, zone.w, zone.h);
@@ -1257,6 +1290,66 @@ function drawObjectivePointer() {
   ctx.restore();
 }
 
+function drawMinimap() {
+  const mapW = 170;
+  const mapH = 115;
+  const x = WIDTH - mapW - 18;
+  const y = 18;
+  drawRoundedRect(x, y, mapW, mapH, 10, "rgba(10,18,20,0.78)", "rgba(190,220,200,0.28)");
+
+  ctx.strokeStyle = "rgba(255,255,255,0.08)";
+  for (let i = 1; i < 4; i++) {
+    const gx = x + (mapW / 4) * i;
+    ctx.beginPath();
+    ctx.moveTo(gx, y + 10);
+    ctx.lineTo(gx, y + mapH - 10);
+    ctx.stroke();
+  }
+  for (let i = 1; i < 3; i++) {
+    const gy = y + (mapH / 3) * i;
+    ctx.beginPath();
+    ctx.moveTo(x + 10, gy);
+    ctx.lineTo(x + mapW - 10, gy);
+    ctx.stroke();
+  }
+
+  state.terrain.forEach((zone) => {
+    const zx = x + (zone.x / WORLD_WIDTH) * mapW;
+    const zy = y + (zone.y / WORLD_HEIGHT) * mapH;
+    const zw = (zone.w / WORLD_WIDTH) * mapW;
+    const zh = (zone.h / WORLD_HEIGHT) * mapH;
+    ctx.fillStyle =
+      zone.type === "road" ? "rgba(160,150,125,0.55)" :
+      zone.type === "water" ? "rgba(90,170,220,0.55)" :
+      zone.type === "hill" ? "rgba(120,170,115,0.32)" :
+      "rgba(70,150,80,0.42)";
+    ctx.fillRect(zx, zy, zw, zh);
+  });
+
+  const target = getCurrentObjectiveTarget();
+  if (target) {
+    ctx.fillStyle = "#ffd966";
+    ctx.beginPath();
+    ctx.arc(x + (target.x / WORLD_WIDTH) * mapW, y + (target.y / WORLD_HEIGHT) * mapH, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  [...state.allies, state.player].forEach((unit) => {
+    if (unit.hp <= 0 || unit.downed) return;
+    ctx.fillStyle = unit === state.player ? "#c7ff8b" : "#9cebd0";
+    ctx.beginPath();
+    ctx.arc(x + (unit.x / WORLD_WIDTH) * mapW, y + (unit.y / WORLD_HEIGHT) * mapH, unit === state.player ? 4 : 3, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  const camX = x + (state.camera.x / WORLD_WIDTH) * mapW;
+  const camY = y + (state.camera.y / WORLD_HEIGHT) * mapH;
+  const camW = (WIDTH / WORLD_WIDTH) * mapW;
+  const camH = (HEIGHT / WORLD_HEIGHT) * mapH;
+  ctx.strokeStyle = "rgba(255,255,255,0.45)";
+  ctx.strokeRect(camX, camY, camW, camH);
+}
+
 function drawVisibilityMask() {
   ctx.save();
   ctx.fillStyle = "rgba(5, 8, 10, 0.52)";
@@ -1384,6 +1477,7 @@ function render() {
   drawVisionLighting();
   [...state.allies, state.player].forEach(drawUnit);
   drawObjectivePointer();
+  drawMinimap();
   drawMessage();
   drawOverlay();
 }
