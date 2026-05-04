@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>작전명: 백두</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div>
+        <h1>작전명: 백두</h1>
+        <p>대한민국 분대 전술 탑뷰 액션 MVP</p>
+      </div>
+      <button id="restartBtn">재시작</button>
+    </header>
+
+    <section class="hud">
+      <div class="panel stats">
+        <div>병과: <strong id="className">소총수</strong></div>
+        <div>체력: <strong id="hp">100</strong></div>
+        <div>탄약: <strong id="ammo">30 / 90</strong></div>
+        <div>목표: <strong id="objectiveText">자료 회수 후 탈출</strong></div>
+      </div>
+      <div class="panel squad">
+        <div>분대원</div>
+        <ul id="squadList"></ul>
+      </div>
+    </section>
+
+    <section class="class-select panel">
+      <span>병과 선택</span>
+      <div class="class-buttons">
+        <button class="class-btn active" data-class="rifleman">소총수</button>
+        <button class="class-btn" data-class="medic">의무병</button>
+        <button class="class-btn" data-class="engineer">공병</button>
+        <button class="class-btn" data-class="scout">정찰병</button>
+      </div>
+    </section>
+
+    <section class="mission-select panel">
+      <span>작전 선택</span>
+      <div class="mission-buttons">
+        <button class="mission-btn active" data-mission="intelRaid">정보 탈취</button>
+        <button class="mission-btn" data-mission="outpostDefense">전초기지 방어</button>
+      </div>
+    </section>
+
+    <section class="command-panel panel">
+      <span>분대 명령</span>
+      <div class="command-buttons">
+        <button class="command-btn active" data-command="follow">집결</button>
+        <button class="command-btn" data-command="hold">고정</button>
+        <button class="command-btn" data-command="assault">돌격</button>
+      </div>
+      <div class="status-line">
+        현재 명령: <strong id="commandText">집결</strong> / 적 경계도: <strong id="alertText">낮음</strong>
+      </div>
+    </section>
+
+    <main class="game-shell">
+      <canvas id="gameCanvas" width="960" height="540"></canvas>
+
+      <div class="touch-ui">
+        <div class="joystick-zone">
+          <div id="moveStick" class="stick">
+            <div class="stick-knob"></div>
+          </div>
+        </div>
+        <div class="action-zone">
+          <button id="fireBtn" class="action-btn primary">사격</button>
+          <button id="skillBtn" class="action-btn">스킬</button>
+          <button id="interactBtn" class="action-btn">작전</button>
+        </div>
+      </div>
+    </main>
+
+    <section class="panel help">
+      <div><strong>조작</strong></div>
+      <div>PC: WASD 이동 / 마우스 조준 / 좌클릭 사격 / E 상호작용 / Space 스킬</div>
+      <div>모바일: 좌측 스틱 이동 / 사격 버튼 / 스킬 버튼 / 작전 버튼</div>
+      <div>목표: 적 경비를 제압하고 자료를 회수한 뒤 탈출 지점으로 이동</div>
+    </section>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>

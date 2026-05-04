@@ -1,0 +1,237 @@
+:root {
+  --bg: #0a0f12;
+  --panel: rgba(12, 24, 28, 0.88);
+  --panel-border: rgba(139, 180, 151, 0.25);
+  --accent: #8dcf77;
+  --accent-strong: #b8f08e;
+  --danger: #ff6b6b;
+  --text: #ebf4ee;
+  --muted: #9db0a3;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", "Apple SD Gothic Neo", sans-serif;
+  background: radial-gradient(circle at top, #152329, var(--bg));
+  color: var(--text);
+}
+
+#app {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 12px;
+}
+
+.topbar,
+.hud,
+.class-select,
+.mission-select,
+.command-panel,
+.help {
+  margin-bottom: 12px;
+}
+
+.topbar,
+.hud {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: stretch;
+}
+
+.topbar h1 {
+  margin: 0 0 4px;
+  font-size: 28px;
+}
+
+.topbar p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.stats,
+.squad {
+  flex: 1;
+}
+
+.squad ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: var(--muted);
+}
+
+.class-select {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.mission-select,
+.command-panel {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.class-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mission-buttons,
+.command-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+button {
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 700;
+  color: #08100c;
+  background: var(--accent);
+}
+
+.class-btn {
+  background: #375244;
+  color: var(--text);
+}
+
+.class-btn.active {
+  background: var(--accent);
+  color: #102015;
+}
+
+.mission-btn,
+.command-btn {
+  background: #375244;
+  color: var(--text);
+}
+
+.mission-btn.active,
+.command-btn.active {
+  background: var(--accent);
+  color: #102015;
+}
+
+.status-line {
+  width: 100%;
+  color: var(--muted);
+}
+
+.game-shell {
+  position: relative;
+}
+
+#gameCanvas {
+  width: 100%;
+  height: auto;
+  display: block;
+  background: #22342d;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  touch-action: none;
+}
+
+.touch-ui {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.joystick-zone,
+.action-zone {
+  position: absolute;
+  bottom: 16px;
+}
+
+.joystick-zone {
+  left: 16px;
+}
+
+.action-zone {
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.stick {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+  pointer-events: auto;
+}
+
+.stick-knob {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(184, 240, 142, 0.9);
+  position: absolute;
+  left: 34px;
+  top: 34px;
+}
+
+.action-btn {
+  pointer-events: auto;
+  min-width: 84px;
+  min-height: 54px;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.action-btn.primary {
+  background: rgba(255, 107, 107, 0.88);
+}
+
+.help {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  #app {
+    padding: 8px;
+  }
+
+  .topbar,
+  .hud,
+  .class-select,
+  .mission-select,
+  .command-panel {
+    flex-direction: column;
+  }
+
+  .topbar h1 {
+    font-size: 22px;
+  }
+
+  .help {
+    font-size: 14px;
+  }
+}
