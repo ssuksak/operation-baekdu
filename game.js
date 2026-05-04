@@ -122,6 +122,7 @@ const input = {
   mouseY: HEIGHT / 2,
   touchMoveX: 0,
   touchMoveY: 0,
+  touchAiming: false,
 };
 
 const state = {
@@ -585,6 +586,23 @@ function nearestEnemy(unit, range = 280) {
   return best;
 }
 
+function findEnemyInAimCone(unit, range = 340, cone = 0.6) {
+  let best = null;
+  let bestD = range;
+  state.enemies.forEach((enemy) => {
+    if (enemy.hp <= 0) return;
+    const d = dist(unit, enemy);
+    if (d > bestD || !hasLineOfSight(unit, enemy)) return;
+    const angleTo = Math.atan2(enemy.y - unit.y, enemy.x - unit.x);
+    let diff = Math.atan2(Math.sin(angleTo - unit.angle), Math.cos(angleTo - unit.angle));
+    if (Math.abs(diff) <= cone / 2) {
+      best = enemy;
+      bestD = d;
+    }
+  });
+  return best;
+}
+
 function nearestPlayerTarget(enemy, range = 260) {
   const candidates = [state.player, ...state.allies].filter((u) => u.hp > 0);
   let best = null;
@@ -715,7 +733,16 @@ function updatePlayer(dt) {
 
   p.x += p.vx * dt;
   p.y += p.vy * dt;
-  p.angle = Math.atan2(input.mouseY - p.y, input.mouseX - p.x);
+
+  if (input.touchAiming) {
+    p.angle = Math.atan2(input.mouseY - p.y, input.mouseX - p.x);
+  } else if ("ontouchstart" in window) {
+    if (Math.abs(dx) > 0.05 || Math.abs(dy) > 0.05) {
+      p.angle = Math.atan2(dy, dx);
+    }
+  } else {
+    p.angle = Math.atan2(input.mouseY - p.y, input.mouseX - p.x);
+  }
   resolveCollisions(p);
 
   if (input.fire) {
@@ -726,6 +753,13 @@ function updatePlayer(dt) {
       }
     }
     shoot(p, p.angle);
+  }
+
+  if (input.touchAiming && !input.fire) {
+    const target = findEnemyInAimCone(p, 360, 0.72);
+    if (target || p.role === "heavy" || p.role === "marksman") {
+      shoot(p, p.angle);
+    }
   }
   if (p.ammo <= 0) reload(p);
   if (input.interact) handleInteract();
@@ -1413,6 +1447,27 @@ function drawObjectivePointer() {
   ctx.restore();
 }
 
+function drawAimReticle() {
+  if (!input.touchAiming) return;
+  const sx = input.mouseX - state.camera.x;
+  const sy = input.mouseY - state.camera.y;
+  ctx.strokeStyle = "rgba(255,230,140,0.95)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(sx, sy, 10, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(sx - 14, sy);
+  ctx.lineTo(sx - 6, sy);
+  ctx.moveTo(sx + 6, sy);
+  ctx.lineTo(sx + 14, sy);
+  ctx.moveTo(sx, sy - 14);
+  ctx.lineTo(sx, sy - 6);
+  ctx.moveTo(sx, sy + 6);
+  ctx.lineTo(sx, sy + 14);
+  ctx.stroke();
+}
+
 function drawMinimap() {
   const mapW = 170;
   const mapH = 115;
@@ -1600,6 +1655,7 @@ function render() {
   drawVisibilityMask();
   drawVisionLighting();
   [...state.allies, state.player].forEach(drawUnit);
+  drawAimReticle();
   drawObjectivePointer();
   drawMinimap();
   drawMessage();
@@ -1652,6 +1708,7 @@ canvas.addEventListener("touchstart", (e) => {
   const pos = screenToWorld(touch.clientX, touch.clientY, rect);
   input.mouseX = pos.x;
   input.mouseY = pos.y;
+  input.touchAiming = touch.clientX > rect.left + rect.width * 0.5;
 });
 
 canvas.addEventListener("touchmove", (e) => {
@@ -1661,6 +1718,11 @@ canvas.addEventListener("touchmove", (e) => {
   const pos = screenToWorld(touch.clientX, touch.clientY, rect);
   input.mouseX = pos.x;
   input.mouseY = pos.y;
+  input.touchAiming = touch.clientX > rect.left + rect.width * 0.5;
+});
+
+canvas.addEventListener("touchend", () => {
+  input.touchAiming = false;
 });
 
 function beginPlayerFire() {
