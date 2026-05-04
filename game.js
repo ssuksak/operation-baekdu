@@ -1113,11 +1113,34 @@ function drawCoverVisual(c) {
     return;
   }
 
-  drawRoundedRect(x, y, c.w, c.h, 12, "#85906f", "#c7d3b1");
+  ctx.fillStyle = "#85906f";
+  ctx.beginPath();
+  ctx.ellipse(x + c.w * 0.34, y + c.h * 0.52, c.w * 0.22, c.h * 0.34, 0.1, 0, Math.PI * 2);
+  ctx.ellipse(x + c.w * 0.57, y + c.h * 0.46, c.w * 0.24, c.h * 0.32, -0.08, 0, Math.PI * 2);
+  ctx.ellipse(x + c.w * 0.72, y + c.h * 0.60, c.w * 0.16, c.h * 0.24, 0.25, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#c7d3b1";
+  ctx.lineWidth = 2;
+  ctx.stroke();
   ctx.fillStyle = "rgba(255,255,255,0.10)";
   ctx.beginPath();
-  ctx.ellipse(x + c.w * 0.35, y + c.h * 0.35, c.w * 0.18, c.h * 0.16, 0, 0, Math.PI * 2);
+  ctx.ellipse(x + c.w * 0.35, y + c.h * 0.35, c.w * 0.13, c.h * 0.12, 0, 0, Math.PI * 2);
   ctx.fill();
+}
+
+function drawAtmospherics() {
+  const sun = ctx.createRadialGradient(130, 90, 30, 130, 90, 520);
+  sun.addColorStop(0, "rgba(255,244,186,0.12)");
+  sun.addColorStop(0.45, "rgba(255,244,186,0.06)");
+  sun.addColorStop(1, "rgba(255,244,186,0)");
+  ctx.fillStyle = sun;
+  ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+  const vignette = ctx.createRadialGradient(WIDTH / 2, HEIGHT / 2, HEIGHT * 0.25, WIDTH / 2, HEIGHT / 2, HEIGHT * 0.85);
+  vignette.addColorStop(0.65, "rgba(0,0,0,0)");
+  vignette.addColorStop(1, "rgba(0,0,0,0.18)");
+  ctx.fillStyle = vignette;
+  ctx.fillRect(0, 0, WIDTH, HEIGHT);
 }
 
 function drawTerrain() {
@@ -1533,6 +1556,7 @@ function render() {
   ctx.clearRect(0, 0, WIDTH, HEIGHT);
   drawTerrain();
   drawGrid();
+  drawAtmospherics();
   drawObjectives();
   state.enemies.forEach(drawUnit);
   drawBullets();
