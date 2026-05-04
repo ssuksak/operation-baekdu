@@ -1068,6 +1068,10 @@ function drawRoundedRect(x, y, w, h, r, fill, stroke = null) {
 function drawCoverVisual(c) {
   const x = c.x - state.camera.x;
   const y = c.y - state.camera.y;
+  ctx.fillStyle = "rgba(0,0,0,0.18)";
+  ctx.beginPath();
+  ctx.roundRect(x + 8, y + 8, c.w, c.h, 10);
+  ctx.fill();
 
   if (c.type === "building") {
     drawRoundedRect(x, y, c.w, c.h, 10, "#8a949e", "#d7dfe6");
@@ -1117,8 +1121,18 @@ function drawCoverVisual(c) {
 }
 
 function drawTerrain() {
-  ctx.fillStyle = "#466853";
+  const bg = ctx.createLinearGradient(0, 0, 0, HEIGHT);
+  bg.addColorStop(0, "#5f815c");
+  bg.addColorStop(1, "#3f5a46");
+  ctx.fillStyle = bg;
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+  ctx.fillStyle = "rgba(255,255,255,0.03)";
+  for (let i = 0; i < 80; i++) {
+    const px = ((i * 97) + state.camera.x * 0.12) % WIDTH;
+    const py = ((i * 53) + state.camera.y * 0.09) % HEIGHT;
+    ctx.fillRect(px, py, 2, 2);
+  }
 
   state.terrain.forEach((zone) => {
     const sx = zone.x - state.camera.x;
@@ -1128,8 +1142,25 @@ function drawTerrain() {
       ctx.beginPath();
       ctx.ellipse(sx + zone.w / 2, sy + zone.h / 2, zone.w / 2, zone.h / 2, 0, 0, Math.PI * 2);
       ctx.fill();
+      ctx.strokeStyle = "rgba(230,255,210,0.10)";
+      for (let i = 1; i <= 3; i++) {
+        ctx.beginPath();
+        ctx.ellipse(
+          sx + zone.w / 2,
+          sy + zone.h / 2,
+          zone.w / 2 - i * 50,
+          zone.h / 2 - i * 26,
+          0,
+          0,
+          Math.PI * 2
+        );
+        ctx.stroke();
+      }
     } else if (zone.type === "road") {
       drawRoundedRect(sx, sy, zone.w, zone.h, 16, "#7a7568", "#a39d8d");
+      ctx.fillStyle = "rgba(90,75,55,0.18)";
+      ctx.fillRect(sx, sy + 8, zone.w, 10);
+      ctx.fillRect(sx, sy + zone.h - 18, zone.w, 10);
       ctx.strokeStyle = "rgba(245,235,190,0.32)";
       ctx.setLineDash([18, 14]);
       ctx.beginPath();
@@ -1153,6 +1184,14 @@ function drawTerrain() {
       for (let i = 0; i < 12; i++) {
         ctx.fillRect(sx + ((i * 19) % zone.w), sy + ((i * 23) % zone.h), 16, 8);
       }
+      ctx.fillStyle = "rgba(20,70,26,0.35)";
+      for (let i = 0; i < 10; i++) {
+        const tx = sx + ((i * 41) % Math.max(1, zone.w - 20));
+        const ty = sy + ((i * 37) % Math.max(1, zone.h - 18));
+        ctx.beginPath();
+        ctx.arc(tx + 8, ty + 8, 9, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
   });
 
@@ -1164,14 +1203,41 @@ function drawTerrain() {
 function drawUnit(unit) {
   if (unit.hp <= 0 && !unit.downed) return;
   if (unit.team === "enemy" && !isVisibleToSquad(unit)) return;
+  const sx = unit.x - state.camera.x;
+  const sy = unit.y - state.camera.y;
+
+  ctx.fillStyle = "rgba(0,0,0,0.28)";
+  ctx.beginPath();
+  ctx.ellipse(sx, sy + unit.radius + 5, unit.radius + 5, unit.radius * 0.75, 0, 0, Math.PI * 2);
+  ctx.fill();
+
   ctx.save();
-  ctx.translate(unit.x - state.camera.x, unit.y - state.camera.y);
+  ctx.translate(sx, sy);
   ctx.rotate(unit.angle);
 
   ctx.fillStyle = unit.downed ? "#9aa4a0" : unit.color;
   ctx.beginPath();
-  ctx.arc(0, 0, unit.radius, 0, Math.PI * 2);
+  ctx.roundRect(-7, -10, 14, 20, 5);
   ctx.fill();
+
+  ctx.fillStyle = unit.team === "enemy" ? "#3d2a2a" : "#253229";
+  ctx.beginPath();
+  ctx.arc(-1, -6, unit.radius * 0.65, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = unit.team === "enemy" ? "#5e4747" : "#131c14";
+  ctx.fillRect(2, -3, unit.radius + 11, 6);
+  ctx.fillRect(-6, 7, 4, 8);
+  ctx.fillRect(2, 7, 4, 8);
+
+  if (unit.team === "enemy") {
+    ctx.fillStyle = "rgba(255,115,115,0.82)";
+    ctx.fillRect(-5, -1, 10, 4);
+  } else {
+    ctx.fillStyle = "rgba(210,255,185,0.82)";
+    ctx.fillRect(-5, -1, 10, 4);
+  }
+
   if (unit.team !== "enemy") {
     ctx.strokeStyle = unit === state.player ? "#d9ffab" : "rgba(180,255,210,0.65)";
     ctx.lineWidth = unit === state.player ? 3 : 2;
@@ -1186,14 +1252,12 @@ function drawUnit(unit) {
     }
   }
 
-  ctx.fillStyle = "#18211a";
-  ctx.fillRect(0, -3, unit.radius + 10, 6);
   ctx.restore();
 
   ctx.fillStyle = "rgba(0,0,0,0.55)";
-  ctx.fillRect(unit.x - state.camera.x - 16, unit.y - state.camera.y - 22, 32, 5);
+  ctx.fillRect(sx - 16, sy - 24, 32, 5);
   ctx.fillStyle = unit.team === "enemy" ? "#ff7474" : "#86e886";
-  ctx.fillRect(unit.x - state.camera.x - 16, unit.y - state.camera.y - 22, 32 * (unit.hp / unit.maxHp), 5);
+  ctx.fillRect(sx - 16, sy - 24, 32 * (unit.hp / unit.maxHp), 5);
 }
 
 function drawObjectives() {
