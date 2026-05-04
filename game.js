@@ -446,7 +446,7 @@ function isInBrush(unit) {
 function isVisibleToSquad(target) {
   const viewers = [state.player, ...state.allies].filter((u) => u.hp > 0 && !u.downed);
   return viewers.some((viewer) => {
-    const baseRange = viewer === state.player ? 260 : 180;
+    const baseRange = viewer === state.player ? 340 : 230;
     const adjustedRange = isInBrush(target) ? baseRange * 0.55 : baseRange;
     return dist(viewer, target) < adjustedRange && hasLineOfSight(viewer, target);
   });
@@ -1009,7 +1009,7 @@ function update(dt) {
 }
 
 function drawGrid() {
-  ctx.strokeStyle = "rgba(255,255,255,0.04)";
+  ctx.strokeStyle = "rgba(255,255,255,0.08)";
   ctx.lineWidth = 1;
   const startX = Math.floor(state.camera.x / 40) * 40;
   const endX = state.camera.x + WIDTH;
@@ -1030,21 +1030,21 @@ function drawGrid() {
 }
 
 function drawTerrain() {
-  ctx.fillStyle = "#2f4b3e";
+  ctx.fillStyle = "#466853";
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
   state.terrain.forEach((zone) => {
     const sx = zone.x - state.camera.x;
     const sy = zone.y - state.camera.y;
     if (zone.type === "hill") {
-      ctx.fillStyle = "#48654d";
+      ctx.fillStyle = "#6a8a67";
       ctx.beginPath();
       ctx.ellipse(sx + zone.w / 2, sy + zone.h / 2, zone.w / 2, zone.h / 2, 0, 0, Math.PI * 2);
       ctx.fill();
     } else if (zone.type === "brush") {
-      ctx.fillStyle = "rgba(38, 92, 48, 0.85)";
+      ctx.fillStyle = "rgba(45, 117, 59, 0.95)";
       ctx.fillRect(sx, sy, zone.w, zone.h);
-      ctx.fillStyle = "rgba(62, 130, 71, 0.35)";
+      ctx.fillStyle = "rgba(110, 184, 104, 0.45)";
       for (let i = 0; i < 12; i++) {
         ctx.fillRect(sx + ((i * 19) % zone.w), sy + ((i * 23) % zone.h), 16, 8);
       }
@@ -1052,11 +1052,11 @@ function drawTerrain() {
   });
 
   state.cover.forEach((c) => {
-    if (c.type === "building") ctx.fillStyle = "#51606d";
-    else if (c.type === "sandbag") ctx.fillStyle = "#8a7f62";
-    else if (c.type === "placedCover") ctx.fillStyle = "#c79e55";
-    else if (c.type === "wall") ctx.fillStyle = "#7a6e66";
-    else ctx.fillStyle = "#5f6c57";
+    if (c.type === "building") ctx.fillStyle = "#7f8a94";
+    else if (c.type === "sandbag") ctx.fillStyle = "#b69f74";
+    else if (c.type === "placedCover") ctx.fillStyle = "#d8ae5b";
+    else if (c.type === "wall") ctx.fillStyle = "#9a8a7f";
+    else ctx.fillStyle = "#83906e";
     ctx.fillRect(c.x - state.camera.x, c.y - state.camera.y, c.w, c.h);
   });
 }
@@ -1186,7 +1186,7 @@ function drawObjectivePointer() {
 
 function drawVisibilityMask() {
   ctx.save();
-  ctx.fillStyle = "rgba(3, 5, 6, 0.86)";
+  ctx.fillStyle = "rgba(5, 8, 10, 0.52)";
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
   ctx.globalCompositeOperation = "destination-out";
 
@@ -1194,15 +1194,15 @@ function drawVisibilityMask() {
   viewers.forEach((viewer, index) => {
     const sx = viewer.x - state.camera.x;
     const sy = viewer.y - state.camera.y;
-    const radius = index === 0 ? 220 : 140;
+    const radius = index === 0 ? 280 : 185;
 
     ctx.beginPath();
-    ctx.arc(sx, sy, radius * 0.55, 0, Math.PI * 2);
+    ctx.arc(sx, sy, radius * 0.72, 0, Math.PI * 2);
     ctx.fill();
 
     if (index === 0) {
-      const coneLength = 270;
-      const spread = 0.95;
+      const coneLength = 360;
+      const spread = 1.18;
       ctx.beginPath();
       ctx.moveTo(sx, sy);
       ctx.arc(sx, sy, coneLength, viewer.angle - spread / 2, viewer.angle + spread / 2);
