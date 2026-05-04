@@ -535,14 +535,24 @@ function shoot(shooter, angle) {
       ? 0.08
       : 0.05;
   const finalAngle = angle + (Math.random() - 0.5) * spread;
+  const muzzleX = shooter.x + Math.cos(finalAngle) * (shooter.radius + 14);
+  const muzzleY = shooter.y + Math.sin(finalAngle) * (shooter.radius + 14);
   state.bullets.push({
-    x: shooter.x,
-    y: shooter.y,
+    x: muzzleX,
+    y: muzzleY,
     vx: Math.cos(finalAngle) * (shooter.role === "marksman" ? 520 : 450),
     vy: Math.sin(finalAngle) * (shooter.role === "marksman" ? 520 : 450),
     team: shooter.team,
     damage: shooter.damage,
-    life: 1.4,
+    life: 1.7,
+  });
+  state.effects.push({
+    kind: "muzzle",
+    x: muzzleX,
+    y: muzzleY,
+    angle: finalAngle,
+    life: 0.08,
+    color: shooter.team === "enemy" ? "#ffb2a0" : "#ffe7a0",
   });
   if (shooter === state.player) updateHud();
 }
@@ -1330,9 +1340,18 @@ function drawObjectives() {
 function drawBullets() {
   state.bullets.forEach((b) => {
     if (!isOnScreen(b.x, b.y, 20)) return;
+    const angle = Math.atan2(b.vy, b.vx);
+    const sx = b.x - state.camera.x;
+    const sy = b.y - state.camera.y;
+    ctx.strokeStyle = b.team === "enemy" ? "rgba(255,140,140,0.95)" : "rgba(255,240,150,0.95)";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(sx - Math.cos(angle) * 14, sy - Math.sin(angle) * 14);
+    ctx.lineTo(sx, sy);
+    ctx.stroke();
     ctx.fillStyle = b.team === "enemy" ? "#ff9e9e" : "#fff5a5";
     ctx.beginPath();
-    ctx.arc(b.x - state.camera.x, b.y - state.camera.y, 3, 0, Math.PI * 2);
+    ctx.arc(sx, sy, 4, 0, Math.PI * 2);
     ctx.fill();
   });
 }
@@ -1340,6 +1359,23 @@ function drawBullets() {
 function drawEffects() {
   state.effects.forEach((e) => {
     if (!isOnScreen(e.x, e.y, 80)) return;
+    if (e.kind === "muzzle") {
+      ctx.save();
+      ctx.translate(e.x - state.camera.x, e.y - state.camera.y);
+      ctx.rotate(e.angle);
+      ctx.globalAlpha = Math.max(0, e.life * 12);
+      ctx.fillStyle = e.color;
+      ctx.beginPath();
+      ctx.moveTo(14, 0);
+      ctx.lineTo(-4, -6);
+      ctx.lineTo(-1, 0);
+      ctx.lineTo(-4, 6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+      ctx.globalAlpha = 1;
+      return;
+    }
     ctx.globalAlpha = Math.max(0, e.life * 2);
     ctx.strokeStyle = e.color;
     ctx.lineWidth = 2;
@@ -1627,7 +1663,14 @@ canvas.addEventListener("touchmove", (e) => {
   input.mouseY = pos.y;
 });
 
-canvas.addEventListener("mousedown", () => (input.fire = true));
+function beginPlayerFire() {
+  input.fire = true;
+  if (state.player && !state.gameOver && !state.victory) {
+    shoot(state.player, state.player.angle);
+  }
+}
+
+canvas.addEventListener("mousedown", () => beginPlayerFire());
 window.addEventListener("mouseup", () => (input.fire = false));
 
 function pressButtonStart(btn, handler) {
@@ -1649,7 +1692,10 @@ function pressButtonStart(btn, handler) {
   });
 }
 
-pressButtonStart(fireBtn, (v) => (input.fire = v));
+pressButtonStart(fireBtn, (v) => {
+  if (v) beginPlayerFire();
+  else input.fire = false;
+});
 pressButtonStart(interactBtn, (v) => {
   if (v) input.interact = true;
 });
