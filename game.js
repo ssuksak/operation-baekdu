@@ -385,17 +385,19 @@ function resetGame() {
 
 function updateHud() {
   const p = state.player;
+  const objectiveTarget = getCurrentObjectiveTarget();
+  const objectiveDistance = objectiveTarget ? Math.floor(dist(p, objectiveTarget)) : 0;
   hpEl.textContent = Math.max(0, Math.ceil(p.hp));
   ammoEl.textContent = `${p.ammo} / ${p.reserve}`;
   classNameEl.textContent = classConfigs[state.selectedClass].label;
   objectiveTextEl.textContent =
     state.selectedMission === "outpostDefense"
-      ? `전초기지 방어 ${Math.max(0, Math.ceil(state.missionClock))}초`
+      ? `전초기지 방어 ${Math.max(0, Math.ceil(state.missionClock))}초 / ${objectiveDistance}m`
       : state.objectivePhase === "disableJammer"
-      ? "교란기 파괴"
+      ? `교란기 파괴 / ${objectiveDistance}m`
       : state.objectivePhase === "retrieve"
-      ? "자료 회수"
-      : "탈출 지점으로 복귀";
+      ? `자료 회수 / ${objectiveDistance}m`
+      : `탈출 지점으로 복귀 / ${objectiveDistance}m`;
   commandTextEl.textContent =
     state.squadCommand === "follow" ? "집결" : state.squadCommand === "hold" ? "고정" : "돌격";
   alertTextEl.textContent = state.alertLevel;
@@ -455,6 +457,13 @@ function isOnScreen(x, y, padding = 80) {
     x <= state.camera.x + WIDTH + padding &&
     y >= state.camera.y - padding &&
     y <= state.camera.y + HEIGHT + padding;
+}
+
+function getCurrentObjectiveTarget() {
+  if (state.selectedMission === "outpostDefense") return state.defendZone;
+  if (state.objectivePhase === "disableJammer") return state.jammer;
+  if (state.objectivePhase === "retrieve") return state.intel;
+  return state.extraction;
 }
 
 function hasLineOfSight(a, b) {
@@ -888,7 +897,7 @@ function updateEffects(dt) {
 function handleInteract() {
   input.interact = false;
   const p = state.player;
-  const downedAlly = state.allies.find((ally) => ally.downed && dist(p, ally) < 34);
+  const downedAlly = state.allies.find((ally) => ally.downed && dist(p, ally) < 42);
   if (downedAlly) {
     downedAlly.downed = false;
     downedAlly.hp = downedAlly.maxHp * 0.55;
@@ -898,7 +907,7 @@ function handleInteract() {
     return;
   }
 
-  const supply = state.supplies.find((item) => !item.used && Math.hypot(p.x - item.x, p.y - item.y) < 30);
+  const supply = state.supplies.find((item) => !item.used && Math.hypot(p.x - item.x, p.y - item.y) < 40);
   if (supply) {
     supply.used = true;
     if (supply.type === "ammo") {
@@ -916,7 +925,7 @@ function handleInteract() {
 
   if (state.selectedMission === "outpostDefense") return;
 
-  if (state.jammer && !state.jammer.disabled && Math.hypot(p.x - state.jammer.x, p.y - state.jammer.y) < 32) {
+  if (state.jammer && !state.jammer.disabled && Math.hypot(p.x - state.jammer.x, p.y - state.jammer.y) < 42) {
     state.jammer.disabled = true;
     state.objectivePhase = "retrieve";
     state.enemies.push(
@@ -928,7 +937,7 @@ function handleInteract() {
     return;
   }
 
-  if (state.jammer?.disabled && !state.intel.collected && Math.hypot(p.x - state.intel.x, p.y - state.intel.y) < 28) {
+  if (state.jammer?.disabled && !state.intel.collected && Math.hypot(p.x - state.intel.x, p.y - state.intel.y) < 40) {
     state.intel.collected = true;
     state.objectivePhase = "extract";
     state.enemies.push(
@@ -940,7 +949,7 @@ function handleInteract() {
     return;
   }
 
-  if (state.objectivePhase === "extract" && Math.hypot(p.x - state.extraction.x, p.y - state.extraction.y) < 36) {
+  if (state.objectivePhase === "extract" && Math.hypot(p.x - state.extraction.x, p.y - state.extraction.y) < 48) {
     state.victory = true;
     if (!state.stats.finishedAt) state.stats.finishedAt = performance.now();
     setMessage("작전 성공! 분대가 임무를 완수했다", 10);
@@ -1063,6 +1072,13 @@ function drawUnit(unit) {
   ctx.beginPath();
   ctx.arc(0, 0, unit.radius, 0, Math.PI * 2);
   ctx.fill();
+  if (unit.team !== "enemy") {
+    ctx.strokeStyle = unit === state.player ? "#d9ffab" : "rgba(180,255,210,0.65)";
+    ctx.lineWidth = unit === state.player ? 3 : 2;
+    ctx.beginPath();
+    ctx.arc(0, 0, unit.radius + (unit === state.player ? 4 : 2), 0, Math.PI * 2);
+    ctx.stroke();
+  }
 
   ctx.fillStyle = "#18211a";
   ctx.fillRect(0, -3, unit.radius + 10, 6);
@@ -1139,6 +1155,33 @@ function drawEffects() {
     ctx.stroke();
     ctx.globalAlpha = 1;
   });
+}
+
+function drawObjectivePointer() {
+  const target = getCurrentObjectiveTarget();
+  if (!target) return;
+  if (isOnScreen(target.x, target.y, 0)) return;
+
+  const centerX = WIDTH / 2;
+  const centerY = HEIGHT / 2;
+  const dx = target.x - state.player.x;
+  const dy = target.y - state.player.y;
+  const angle = Math.atan2(dy, dx);
+  const radius = Math.min(WIDTH, HEIGHT) * 0.36;
+  const px = centerX + Math.cos(angle) * radius;
+  const py = centerY + Math.sin(angle) * radius;
+
+  ctx.save();
+  ctx.translate(px, py);
+  ctx.rotate(angle);
+  ctx.fillStyle = "#ffe082";
+  ctx.beginPath();
+  ctx.moveTo(18, 0);
+  ctx.lineTo(-10, -10);
+  ctx.lineTo(-10, 10);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
 }
 
 function drawVisibilityMask() {
@@ -1231,6 +1274,7 @@ function render() {
   drawBullets();
   drawEffects();
   drawVisibilityMask();
+  drawObjectivePointer();
   drawMessage();
   drawOverlay();
 }
