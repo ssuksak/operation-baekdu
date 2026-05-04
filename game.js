@@ -1317,6 +1317,16 @@ function drawUnit(unit) {
       ctx.arc(0, 0, 4, 0, Math.PI * 2);
       ctx.fill();
     }
+  } else {
+    ctx.strokeStyle = "rgba(255,120,120,0.95)";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, unit.radius + 3, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = "rgba(255,90,90,0.18)";
+    ctx.beginPath();
+    ctx.arc(0, 0, unit.radius + 8, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   ctx.restore();
@@ -1342,6 +1352,9 @@ function drawObjectives() {
     ctx.beginPath();
     ctx.arc(supply.x - state.camera.x, supply.y - state.camera.y, supply.radius, 0, Math.PI * 2);
     ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.85)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
   });
 
   if (state.jammer && !state.jammer.disabled && isVisibleToSquad(state.jammer)) {
@@ -1349,6 +1362,9 @@ function drawObjectives() {
     ctx.beginPath();
     ctx.arc(state.jammer.x - state.camera.x, state.jammer.y - state.camera.y, state.jammer.radius, 0, Math.PI * 2);
     ctx.fill();
+    ctx.strokeStyle = "#fff0f7";
+    ctx.lineWidth = 3;
+    ctx.stroke();
     ctx.fillStyle = "#5e2640";
     ctx.fillRect(state.jammer.x - state.camera.x - 8, state.jammer.y - state.camera.y - 14, 16, 28);
   }
@@ -1358,13 +1374,16 @@ function drawObjectives() {
     ctx.beginPath();
     ctx.arc(state.intel.x - state.camera.x, state.intel.y - state.camera.y, state.intel.radius, 0, Math.PI * 2);
     ctx.fill();
+    ctx.strokeStyle = "#fff2b8";
+    ctx.lineWidth = 3;
+    ctx.stroke();
     ctx.fillStyle = "#4d4218";
     ctx.fillRect(state.intel.x - state.camera.x - 8, state.intel.y - state.camera.y - 10, 16, 20);
   }
 
   if (state.extraction) {
     ctx.strokeStyle = "#89f7c6";
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 4;
     ctx.beginPath();
     ctx.arc(state.extraction.x - state.camera.x, state.extraction.y - state.camera.y, state.extraction.radius, 0, Math.PI * 2);
     ctx.stroke();
@@ -1654,6 +1673,8 @@ function render() {
   drawEffects();
   drawVisibilityMask();
   drawVisionLighting();
+  drawObjectives();
+  state.enemies.forEach(drawUnit);
   [...state.allies, state.player].forEach(drawUnit);
   drawAimReticle();
   drawObjectivePointer();
