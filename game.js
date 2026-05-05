@@ -563,9 +563,9 @@ function shoot(shooter, angle) {
     kind: "tracer",
     x1: muzzleX,
     y1: muzzleY,
-    x2: muzzleX + Math.cos(finalAngle) * 40,
-    y2: muzzleY + Math.sin(finalAngle) * 40,
-    life: 0.12,
+    x2: muzzleX + Math.cos(finalAngle) * 140,
+    y2: muzzleY + Math.sin(finalAngle) * 140,
+    life: 0.2,
     color: shooter.team === "enemy" ? "#ff9e9e" : "#fff1a6",
   });
   if (shooter === state.player) updateHud();
@@ -1506,6 +1506,18 @@ function drawEffects() {
       ctx.fill();
       ctx.restore();
       ctx.globalAlpha = 1;
+      return;
+    }
+    if (e.kind === "tracer") {
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, e.life * 8);
+      ctx.strokeStyle = e.color;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(e.x1 - state.camera.x, e.y1 - state.camera.y);
+      ctx.lineTo(e.x2 - state.camera.x, e.y2 - state.camera.y);
+      ctx.stroke();
+      ctx.restore();
       return;
     }
     if (e.kind === "marker") {
