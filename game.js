@@ -133,6 +133,7 @@ const state = {
   allies: [],
   enemies: [],
   bullets: [],
+  projectiles: [],
   effects: [],
   cover: [],
   terrain: [],
@@ -376,6 +377,7 @@ function resetGame() {
   state.extraction = mission.extraction;
   state.defendZone = mission.defendZone;
   state.bullets = [];
+  state.projectiles = [];
   state.effects = [];
   state.objectivePhase = mission.phase;
   state.alertLevel = "낮음";
@@ -557,6 +559,15 @@ function shoot(shooter, angle) {
     life: 0.08,
     color: shooter.team === "enemy" ? "#ffb2a0" : "#ffe7a0",
   });
+  state.effects.push({
+    kind: "tracer",
+    x1: muzzleX,
+    y1: muzzleY,
+    x2: muzzleX + Math.cos(finalAngle) * 40,
+    y2: muzzleY + Math.sin(finalAngle) * 40,
+    life: 0.12,
+    color: shooter.team === "enemy" ? "#ff9e9e" : "#fff1a6",
+  });
   if (shooter === state.player) updateHud();
 }
 
@@ -677,6 +688,25 @@ function triggerExplosion(x, y, radius, damage, sourceTeam) {
   updateHud();
 }
 
+function launchProjectile(kind, x, y, angle, distance, speed, color) {
+  const tx = x + Math.cos(angle) * distance;
+  const ty = y + Math.sin(angle) * distance;
+  const dx = tx - x;
+  const dy = ty - y;
+  const len = Math.hypot(dx, dy) || 1;
+  state.projectiles.push({
+    kind,
+    x,
+    y,
+    tx,
+    ty,
+    vx: (dx / len) * speed,
+    vy: (dy / len) * speed,
+    color,
+    radius: kind === "flashbang" ? 11 : 9,
+  });
+}
+
 function usePlayerSkill() {
   const p = state.player;
   if (p.skillCooldown > 0 || state.gameOver || state.victory) return;
@@ -697,22 +727,10 @@ function usePlayerSkill() {
     setMessage("공병 엄폐물 설치");
   } else if (p.role === "scout") {
     p.visionBoost = 7;
-    state.effects.push({ kind: "pulse", x: p.x, y: p.y, r: 220, life: 0.8, color: "#c88cff" });
-    state.enemies.forEach((e) => {
-      if (dist(p, e) < 420) {
-        state.effects.push({ kind: "marker", x: e.x, y: e.y, r: 18, life: 1.5, color: "#d29bff" });
-      }
-    });
+    launchProjectile("scoutPulse", p.x + Math.cos(p.angle) * 22, p.y + Math.sin(p.angle) * 22, p.angle, 180, 360, "#c88cff");
     setMessage("정찰 드론으로 적 위치 노출");
   } else {
-    const fx = p.x + Math.cos(p.angle) * 90;
-    const fy = p.y + Math.sin(p.angle) * 90;
-    state.enemies.forEach((e) => {
-      if (Math.hypot(e.x - fx, e.y - fy) < 150) {
-        e.cooldown += 1.1;
-      }
-    });
-    state.effects.push({ kind: "flash", x: fx, y: fy, r: 110, life: 0.55, color: "#fff1a6" });
+    launchProjectile("flashbang", p.x + Math.cos(p.angle) * 22, p.y + Math.sin(p.angle) * 22, p.angle, 210, 340, "#fff1a6");
     setMessage("섬광탄 투척");
   }
 
@@ -955,6 +973,33 @@ function updateBullets(dt) {
   state.cover = state.cover.filter((c) => c.hp > 0);
 }
 
+function updateProjectiles(dt) {
+  state.projectiles.forEach((p) => {
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+  });
+
+  state.projectiles = state.projectiles.filter((p) => {
+    const arrived = Math.hypot(p.tx - p.x, p.ty - p.y) < 16;
+    if (!arrived) return true;
+
+    if (p.kind === "flashbang") {
+      state.effects.push({ kind: "flash", x: p.x, y: p.y, r: 140, life: 0.65, color: "#fff1a6" });
+      state.enemies.forEach((e) => {
+        if (Math.hypot(e.x - p.x, e.y - p.y) < 190) e.cooldown += 1.2;
+      });
+    } else if (p.kind === "scoutPulse") {
+      state.effects.push({ kind: "pulse", x: p.x, y: p.y, r: 220, life: 0.9, color: "#c88cff" });
+      state.enemies.forEach((e) => {
+        if (Math.hypot(e.x - p.x, e.y - p.y) < 420) {
+          state.effects.push({ kind: "marker", x: e.x, y: e.y, r: 18, life: 1.5, color: "#d29bff" });
+        }
+      });
+    }
+    return false;
+  });
+}
+
 function updateEffects(dt) {
   state.effects.forEach((e) => (e.life -= dt));
   state.effects = state.effects.filter((e) => e.life > 0);
@@ -1048,6 +1093,7 @@ function update(dt) {
   state.allies.forEach((ally, index) => updateAlly(ally, dt, index));
   state.enemies.forEach((enemy) => updateEnemy(enemy, dt));
   updateBullets(dt);
+  updateProjectiles(dt);
   updateEffects(dt);
 
   if (state.selectedMission === "outpostDefense") {
@@ -1416,6 +1462,32 @@ function drawBullets() {
   });
 }
 
+function drawProjectiles() {
+  state.projectiles.forEach((p) => {
+    if (!isOnScreen(p.x, p.y, 30)) return;
+    const angle = Math.atan2(p.vy, p.vx);
+    const sx = p.x - state.camera.x;
+    const sy = p.y - state.camera.y;
+    ctx.strokeStyle = p.color;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(sx - Math.cos(angle) * 24, sy - Math.sin(angle) * 24);
+    ctx.lineTo(sx, sy);
+    ctx.stroke();
+    ctx.fillStyle = "rgba(255,255,255,0.18)";
+    ctx.beginPath();
+    ctx.arc(sx, sy, p.radius + 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(sx, sy, p.radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  });
+}
+
 function drawEffects() {
   state.effects.forEach((e) => {
     if (!isOnScreen(e.x, e.y, 80)) return;
@@ -1718,10 +1790,11 @@ function render() {
   drawAtmospherics();
   drawObjectives();
   state.enemies.forEach(drawUnit);
-  drawBullets();
-  drawEffects();
   drawVisibilityMask();
   drawVisionLighting();
+  drawProjectiles();
+  drawBullets();
+  drawEffects();
   drawObjectives();
   state.enemies.forEach(drawUnit);
   [...state.allies, state.player].forEach(drawUnit);
