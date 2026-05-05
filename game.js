@@ -153,6 +153,8 @@ const state = {
   wavesRemaining: 0,
   stats: null,
   camera: { x: 0, y: 0 },
+  hitMarkerTimer: 0,
+  killMarkerTimer: 0,
   lastTime: 0,
 };
 
@@ -563,9 +565,9 @@ function shoot(shooter, angle) {
     kind: "tracer",
     x1: muzzleX,
     y1: muzzleY,
-    x2: muzzleX + Math.cos(finalAngle) * 140,
-    y2: muzzleY + Math.sin(finalAngle) * 140,
-    life: 0.2,
+    x2: muzzleX + Math.cos(finalAngle) * 180,
+    y2: muzzleY + Math.sin(finalAngle) * 180,
+    life: 0.28,
     color: shooter.team === "enemy" ? "#ff9e9e" : "#fff1a6",
   });
   if (shooter === state.player) updateHud();
@@ -939,7 +941,7 @@ function updateBullets(dt) {
   });
 
   state.bullets = state.bullets.filter((b) => {
-    if (b.life <= 0 || b.x < 0 || b.y < 0 || b.x > WIDTH || b.y > HEIGHT) return false;
+    if (b.life <= 0 || b.x < 0 || b.y < 0 || b.x > WORLD_WIDTH || b.y > WORLD_HEIGHT) return false;
 
     for (const c of state.cover) {
       if (pointInRect(b.x, b.y, c)) {
@@ -953,7 +955,10 @@ function updateBullets(dt) {
       if (t.hp <= 0 || t.downed) continue;
       if (Math.hypot(b.x - t.x, b.y - t.y) <= t.radius) {
         t.hp -= b.damage;
-        if (b.team === "player") state.stats.hits += 1;
+        if (b.team === "player") {
+          state.stats.hits += 1;
+          state.hitMarkerTimer = 0.12;
+        }
         if (b.team !== "enemy") alertNearbyEnemies(t, 220);
         if (t.team !== "enemy" && t !== state.player && t.hp <= 0) {
           t.downed = true;
@@ -961,7 +966,11 @@ function updateBullets(dt) {
           t.bleedout = 12;
           setMessage(`${classConfigs[t.role].label} 다운! 접근하여 회복하라`);
         }
-        if (t.team === "enemy" && t.hp <= 0 && b.team === "player") state.stats.kills += 1;
+        if (t.team === "enemy" && t.hp <= 0 && b.team === "player") {
+          state.stats.kills += 1;
+          state.killMarkerTimer = 0.24;
+        }
+        state.effects.push({ kind: "impact", x: t.x, y: t.y, r: 18, life: 0.22, color: b.team === "enemy" ? "#ff8787" : "#ffe08a" });
         state.effects.push({ x: t.x, y: t.y, r: 15, life: 0.2, color: "#ff6b6b" });
         updateHud();
         return false;
@@ -1117,6 +1126,8 @@ function update(dt) {
   updateCamera();
 
   if (state.messageTimer > 0) state.messageTimer -= dt;
+  if (state.hitMarkerTimer > 0) state.hitMarkerTimer = Math.max(0, state.hitMarkerTimer - dt);
+  if (state.killMarkerTimer > 0) state.killMarkerTimer = Math.max(0, state.killMarkerTimer - dt);
   updateHud();
 }
 
@@ -1490,7 +1501,9 @@ function drawProjectiles() {
 
 function drawEffects() {
   state.effects.forEach((e) => {
-    if (!isOnScreen(e.x, e.y, 80)) return;
+    const sampleX = e.kind === "tracer" ? e.x1 : e.x;
+    const sampleY = e.kind === "tracer" ? e.y1 : e.y;
+    if (!isOnScreen(sampleX, sampleY, 120)) return;
     if (e.kind === "muzzle") {
       ctx.save();
       ctx.translate(e.x - state.camera.x, e.y - state.camera.y);
@@ -1510,9 +1523,15 @@ function drawEffects() {
     }
     if (e.kind === "tracer") {
       ctx.save();
-      ctx.globalAlpha = Math.max(0, e.life * 8);
+      ctx.globalAlpha = Math.max(0, e.life * 6);
       ctx.strokeStyle = e.color;
-      ctx.lineWidth = 4;
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(e.x1 - state.camera.x, e.y1 - state.camera.y);
+      ctx.lineTo(e.x2 - state.camera.x, e.y2 - state.camera.y);
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(255,255,255,0.7)";
+      ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(e.x1 - state.camera.x, e.y1 - state.camera.y);
       ctx.lineTo(e.x2 - state.camera.x, e.y2 - state.camera.y);
@@ -1533,6 +1552,22 @@ function drawEffects() {
       ctx.moveTo(0, -18);
       ctx.lineTo(0, -30);
       ctx.stroke();
+      ctx.restore();
+      return;
+    }
+    if (e.kind === "impact") {
+      ctx.save();
+      ctx.translate(e.x - state.camera.x, e.y - state.camera.y);
+      ctx.globalAlpha = Math.max(0, e.life * 4);
+      ctx.strokeStyle = e.color;
+      ctx.lineWidth = 3;
+      for (let i = 0; i < 6; i++) {
+        const a = (Math.PI * 2 * i) / 6;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a) * 4, Math.sin(a) * 4);
+        ctx.lineTo(Math.cos(a) * 14, Math.sin(a) * 14);
+        ctx.stroke();
+      }
       ctx.restore();
       return;
     }
@@ -1795,6 +1830,43 @@ function drawOverlay() {
   ctx.textAlign = "left";
 }
 
+function drawHitMarkers() {
+  const cx = WIDTH / 2;
+  const cy = HEIGHT / 2;
+
+  if (state.hitMarkerTimer > 0) {
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, state.hitMarkerTimer * 8);
+    ctx.strokeStyle = "#fff4b3";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(cx - 12, cy - 12);
+    ctx.lineTo(cx - 4, cy - 4);
+    ctx.moveTo(cx + 12, cy - 12);
+    ctx.lineTo(cx + 4, cy - 4);
+    ctx.moveTo(cx - 12, cy + 12);
+    ctx.lineTo(cx - 4, cy + 4);
+    ctx.moveTo(cx + 12, cy + 12);
+    ctx.lineTo(cx + 4, cy + 4);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  if (state.killMarkerTimer > 0) {
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, state.killMarkerTimer * 5);
+    ctx.strokeStyle = "#ff8f8f";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(cx - 18, cy - 18);
+    ctx.lineTo(cx + 18, cy + 18);
+    ctx.moveTo(cx + 18, cy - 18);
+    ctx.lineTo(cx - 18, cy + 18);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
 function render() {
   ctx.clearRect(0, 0, WIDTH, HEIGHT);
   drawTerrain();
@@ -1814,6 +1886,7 @@ function render() {
   drawObjectivePointer();
   drawMinimap();
   drawMessage();
+  drawHitMarkers();
   drawOverlay();
 }
 
