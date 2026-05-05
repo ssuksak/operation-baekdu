@@ -406,6 +406,8 @@ function updateHud() {
   hpEl.textContent = Math.max(0, Math.ceil(p.hp));
   ammoEl.textContent = `${p.ammo} / ${p.reserve}`;
   classNameEl.textContent = classConfigs[state.selectedClass].label;
+  const skillBaseName = classConfigs[state.selectedClass].skillName || "스킬";
+  skillBtn.textContent = p.skillCooldown > 0 ? `${skillBaseName} ${p.skillCooldown.toFixed(1)}s` : skillBaseName;
   objectiveTextEl.textContent =
     state.selectedMission === "outpostDefense"
       ? `전초기지 방어 ${Math.max(0, Math.ceil(state.missionClock))}초 / ${objectiveDistance}m`
@@ -687,25 +689,30 @@ function usePlayerSkill() {
         u.hp = Math.min(u.maxHp, u.hp + 28);
       }
     });
+    state.effects.push({ kind: "pulse", x: p.x, y: p.y, r: 96, life: 0.55, color: "#9cffb8" });
     setMessage("의무병 치료 실시");
   } else if (p.role === "engineer") {
     state.cover.push(makeRect(p.x + Math.cos(p.angle) * 28 - 22, p.y + Math.sin(p.angle) * 28 - 10, 44, 20, "placedCover"));
+    state.effects.push({ kind: "pulse", x: p.x + Math.cos(p.angle) * 28, y: p.y + Math.sin(p.angle) * 28, r: 54, life: 0.45, color: "#ffd27a" });
     setMessage("공병 엄폐물 설치");
   } else if (p.role === "scout") {
     p.visionBoost = 7;
+    state.effects.push({ kind: "pulse", x: p.x, y: p.y, r: 220, life: 0.8, color: "#c88cff" });
     state.enemies.forEach((e) => {
-      if (dist(p, e) < 240) {
-        state.effects.push({ x: e.x, y: e.y, r: 18, life: 1.5, color: "#d29bff" });
+      if (dist(p, e) < 420) {
+        state.effects.push({ kind: "marker", x: e.x, y: e.y, r: 18, life: 1.5, color: "#d29bff" });
       }
     });
     setMessage("정찰 드론으로 적 위치 노출");
   } else {
+    const fx = p.x + Math.cos(p.angle) * 90;
+    const fy = p.y + Math.sin(p.angle) * 90;
     state.enemies.forEach((e) => {
-      if (dist(p, e) < 120) {
-        e.cooldown += 0.65;
+      if (Math.hypot(e.x - fx, e.y - fy) < 150) {
+        e.cooldown += 1.1;
       }
     });
-    state.effects.push({ x: p.x + Math.cos(p.angle) * 55, y: p.y + Math.sin(p.angle) * 55, r: 70, life: 0.35, color: "#fff1a6" });
+    state.effects.push({ kind: "flash", x: fx, y: fy, r: 110, life: 0.55, color: "#fff1a6" });
     setMessage("섬광탄 투척");
   }
 
@@ -1427,6 +1434,48 @@ function drawEffects() {
       ctx.fill();
       ctx.restore();
       ctx.globalAlpha = 1;
+      return;
+    }
+    if (e.kind === "marker") {
+      ctx.save();
+      ctx.translate(e.x - state.camera.x, e.y - state.camera.y);
+      ctx.globalAlpha = Math.max(0, e.life * 1.2);
+      ctx.strokeStyle = e.color;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, 12, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, -18);
+      ctx.lineTo(0, -30);
+      ctx.stroke();
+      ctx.restore();
+      return;
+    }
+    if (e.kind === "flash") {
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, e.life * 1.7);
+      ctx.fillStyle = "rgba(255,245,190,0.35)";
+      ctx.beginPath();
+      ctx.arc(e.x - state.camera.x, e.y - state.camera.y, e.r * (1.5 - e.life), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#fff8d5";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(e.x - state.camera.x, e.y - state.camera.y, e.r * (1.25 - e.life * 0.3), 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+      return;
+    }
+    if (e.kind === "pulse") {
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, e.life * 1.4);
+      ctx.strokeStyle = e.color;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(e.x - state.camera.x, e.y - state.camera.y, e.r * (1.2 - e.life * 0.35), 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
       return;
     }
     ctx.globalAlpha = Math.max(0, e.life * 2);
