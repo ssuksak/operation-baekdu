@@ -970,6 +970,15 @@ function updateBullets(dt) {
           state.stats.kills += 1;
           state.killMarkerTimer = 0.24;
         }
+        state.effects.push({
+          kind: "damageText",
+          x: t.x,
+          y: t.y - 14,
+          vy: -28,
+          life: 0.55,
+          text: `${Math.max(1, Math.round(b.damage))}`,
+          color: t.team === "enemy" ? "#fff1a6" : "#ffb3b3",
+        });
         state.effects.push({ kind: "impact", x: t.x, y: t.y, r: 18, life: 0.22, color: b.team === "enemy" ? "#ff8787" : "#ffe08a" });
         state.effects.push({ x: t.x, y: t.y, r: 15, life: 0.2, color: "#ff6b6b" });
         updateHud();
@@ -1010,7 +1019,10 @@ function updateProjectiles(dt) {
 }
 
 function updateEffects(dt) {
-  state.effects.forEach((e) => (e.life -= dt));
+  state.effects.forEach((e) => {
+    e.life -= dt;
+    if (e.kind === "damageText") e.y += e.vy * dt;
+  });
   state.effects = state.effects.filter((e) => e.life > 0);
 }
 
@@ -1568,6 +1580,19 @@ function drawEffects() {
         ctx.lineTo(Math.cos(a) * 14, Math.sin(a) * 14);
         ctx.stroke();
       }
+      ctx.restore();
+      return;
+    }
+    if (e.kind === "damageText") {
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, e.life * 1.8);
+      ctx.fillStyle = e.color;
+      ctx.strokeStyle = "rgba(15,18,30,0.88)";
+      ctx.lineWidth = 4;
+      ctx.font = "bold 18px Arial";
+      ctx.textAlign = "center";
+      ctx.strokeText(e.text, e.x - state.camera.x, e.y - state.camera.y);
+      ctx.fillText(e.text, e.x - state.camera.x, e.y - state.camera.y);
       ctx.restore();
       return;
     }
