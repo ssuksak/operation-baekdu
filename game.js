@@ -155,6 +155,8 @@ const state = {
   camera: { x: 0, y: 0 },
   hitMarkerTimer: 0,
   killMarkerTimer: 0,
+  killBannerTimer: 0,
+  killBannerText: "",
   lastTime: 0,
 };
 
@@ -969,6 +971,8 @@ function updateBullets(dt) {
         if (t.team === "enemy" && t.hp <= 0 && b.team === "player") {
           state.stats.kills += 1;
           state.killMarkerTimer = 0.24;
+          state.killBannerTimer = 0.75;
+          state.killBannerText = `${classConfigs[t.role]?.label || "적"} 처치`;
         }
         state.effects.push({
           kind: "damageText",
@@ -1140,6 +1144,7 @@ function update(dt) {
   if (state.messageTimer > 0) state.messageTimer -= dt;
   if (state.hitMarkerTimer > 0) state.hitMarkerTimer = Math.max(0, state.hitMarkerTimer - dt);
   if (state.killMarkerTimer > 0) state.killMarkerTimer = Math.max(0, state.killMarkerTimer - dt);
+  if (state.killBannerTimer > 0) state.killBannerTimer = Math.max(0, state.killBannerTimer - dt);
   updateHud();
 }
 
@@ -1660,11 +1665,30 @@ function drawObjectivePointer() {
 }
 
 function drawAimReticle() {
-  if (!input.touchAiming) return;
+  const shouldDraw = input.touchAiming || input.fire;
+  if (!shouldDraw) return;
+  const px = state.player.x - state.camera.x;
+  const py = state.player.y - state.camera.y;
   const sx = input.mouseX - state.camera.x;
   const sy = input.mouseY - state.camera.y;
-  ctx.strokeStyle = "rgba(255,230,140,0.95)";
+  ctx.save();
+  ctx.setLineDash([10, 7]);
+  ctx.strokeStyle = "rgba(255,230,140,0.42)";
   ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(px, py);
+  ctx.lineTo(sx, sy);
+  ctx.stroke();
+  ctx.restore();
+  ctx.save();
+  ctx.globalAlpha = 0.28;
+  ctx.fillStyle = "rgba(255,230,140,0.95)";
+  ctx.beginPath();
+  ctx.arc(sx, sy, 18, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle = "rgba(255,230,140,0.95)";
+  ctx.lineWidth = 3;
   ctx.beginPath();
   ctx.arc(sx, sy, 10, 0, Math.PI * 2);
   ctx.stroke();
@@ -1678,6 +1702,23 @@ function drawAimReticle() {
   ctx.moveTo(sx, sy + 6);
   ctx.lineTo(sx, sy + 14);
   ctx.stroke();
+}
+
+function drawKillBanner() {
+  if (state.killBannerTimer <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = Math.min(1, state.killBannerTimer * 2.2);
+  ctx.fillStyle = "rgba(34, 12, 12, 0.72)";
+  ctx.fillRect(WIDTH / 2 - 120, 74, 240, 42);
+  ctx.strokeStyle = "rgba(255, 143, 143, 0.7)";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(WIDTH / 2 - 120, 74, 240, 42);
+  ctx.fillStyle = "#ffd0d0";
+  ctx.font = "bold 20px sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText(state.killBannerText || "적 처치", WIDTH / 2, 101);
+  ctx.restore();
+  ctx.textAlign = "left";
 }
 
 function drawMinimap() {
@@ -1912,6 +1953,7 @@ function render() {
   drawMinimap();
   drawMessage();
   drawHitMarkers();
+  drawKillBanner();
   drawOverlay();
 }
 
@@ -1991,20 +2033,26 @@ window.addEventListener("mouseup", () => (input.fire = false));
 function pressButtonStart(btn, handler) {
   btn.addEventListener("touchstart", (e) => {
     e.preventDefault();
+    btn.classList.add("active");
     handler(true);
   });
   btn.addEventListener("touchend", (e) => {
     e.preventDefault();
+    btn.classList.remove("active");
     handler(false);
   });
   btn.addEventListener("mousedown", (e) => {
     e.preventDefault();
+    btn.classList.add("active");
     handler(true);
   });
   btn.addEventListener("mouseup", (e) => {
     e.preventDefault();
+    btn.classList.remove("active");
     handler(false);
   });
+  btn.addEventListener("mouseleave", () => btn.classList.remove("active"));
+  btn.addEventListener("touchcancel", () => btn.classList.remove("active"));
 }
 
 pressButtonStart(fireBtn, (v) => {
