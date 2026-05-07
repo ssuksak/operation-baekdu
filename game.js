@@ -2572,6 +2572,7 @@ canvas.addEventListener("touchstart", (e) => {
 });
 
 function handleAimTouchMove(e) {
+  if (e.cancelable) e.preventDefault();
   if (aimTouchId === null) return;
   const rect = canvas.getBoundingClientRect();
   const touch = [...e.touches].find((t) => t.identifier === aimTouchId);
@@ -2580,12 +2581,14 @@ function handleAimTouchMove(e) {
 }
 
 function handleAimTouchEnd(e) {
+  if (e.cancelable) e.preventDefault();
   if (![...e.changedTouches].some((t) => t.identifier === aimTouchId)) return;
   aimTouchId = null;
   input.touchAiming = false;
 }
 
-function clearAimTouch() {
+function clearAimTouch(e) {
+  if (e?.cancelable) e.preventDefault();
   aimTouchId = null;
   input.touchAiming = false;
 }
@@ -2726,6 +2729,7 @@ function handleStickTouchMove(e) {
 }
 
 function handleStickTouchEnd(e) {
+  if (e.cancelable) e.preventDefault();
   const t = [...e.changedTouches].find((touch) => touch.identifier === stickTouchId);
   if (t) resetStick();
 }
