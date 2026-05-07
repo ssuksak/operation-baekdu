@@ -542,6 +542,7 @@ function resetGame() {
   state.recoilKick = 0;
   state.cameraShakeTimer = 0;
   state.cameraShakeStrength = 0;
+  state.squadCommand = "follow";
   state.stats = {
     shots: 0,
     hits: 0,
@@ -558,6 +559,7 @@ function resetGame() {
   resetStick();
   classButtons.forEach((btn) => btn.classList.toggle("active", btn.dataset.class === state.selectedClass));
   missionButtons.forEach((btn) => btn.classList.toggle("active", btn.dataset.mission === state.selectedMission));
+  commandButtons.forEach((btn) => btn.classList.toggle("active", btn.dataset.command === state.squadCommand));
   skillBtn.textContent = cfg.skillName;
   if (state.selectedMission === "reconSweep") {
     triggerEventBanner("정찰 소탕 · A/B 지점 확보 후 탈출", "#9fe7ff", 2.8);
