@@ -556,6 +556,8 @@ function resetGame() {
   input.mouseX = state.player.x + 100;
   input.mouseY = state.player.y;
   resetStick();
+  classButtons.forEach((btn) => btn.classList.toggle("active", btn.dataset.class === state.selectedClass));
+  missionButtons.forEach((btn) => btn.classList.toggle("active", btn.dataset.mission === state.selectedMission));
   skillBtn.textContent = cfg.skillName;
   if (state.selectedMission === "reconSweep") {
     triggerEventBanner("정찰 소탕 · A/B 지점 확보 후 탈출", "#9fe7ff", 2.8);
