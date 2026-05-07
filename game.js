@@ -17,6 +17,14 @@ function suppressBrowserInteraction(e) {
   e.preventDefault();
 }
 
+function primeAudioOnInteraction() {
+  ensureAudio();
+  window.removeEventListener("pointerdown", primeAudioOnInteraction);
+  window.removeEventListener("mousedown", primeAudioOnInteraction);
+  window.removeEventListener("touchstart", primeAudioOnInteraction);
+  window.removeEventListener("keydown", primeAudioOnInteraction);
+}
+
 function ensureAudio() {
   if (!audioCtx) {
     const Ctx = window.AudioContext || window.webkitAudioContext;
@@ -2551,7 +2559,10 @@ window.addEventListener("keyup", (e) => {
   if (e.code === "Space") input.skill = false;
 });
 
-window.addEventListener("pointerdown", ensureAudio, { passive: true });
+window.addEventListener("pointerdown", primeAudioOnInteraction, { passive: true });
+window.addEventListener("mousedown", primeAudioOnInteraction, { passive: true });
+window.addEventListener("touchstart", primeAudioOnInteraction, { passive: true });
+window.addEventListener("keydown", primeAudioOnInteraction);
 canvas.addEventListener("contextmenu", suppressBrowserInteraction);
 canvas.addEventListener("dragstart", suppressBrowserInteraction);
 fireBtn.addEventListener("contextmenu", suppressBrowserInteraction);
