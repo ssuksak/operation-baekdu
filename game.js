@@ -157,6 +157,8 @@ const state = {
   killMarkerTimer: 0,
   killBannerTimer: 0,
   killBannerText: "",
+  screenFlashTimer: 0,
+  screenFlashColor: "rgba(255,245,210,0.38)",
   lastTime: 0,
 };
 
@@ -674,8 +676,18 @@ function moveToward(unit, tx, ty, speedFactor, dt) {
   unit.angle = angle;
 }
 
+function triggerScreenFlash(color, amount) {
+  state.screenFlashColor = color;
+  state.screenFlashTimer = Math.max(state.screenFlashTimer, amount);
+}
+
 function triggerExplosion(x, y, radius, damage, sourceTeam) {
   state.effects.push({ x, y, r: radius, life: 0.45, color: "#ffbb66" });
+  state.effects.push({ kind: "shockwave", x, y, r: radius * 1.4, life: 0.42, color: "#ffb866" });
+  state.effects.push({ kind: "burst", x, y, r: radius * 0.75, life: 0.24, color: "#ffd3a0" });
+  if (Math.hypot(state.player.x - x, state.player.y - y) < radius * 2.2) {
+    triggerScreenFlash("rgba(255,178,102,0.24)", 0.18);
+  }
   const targets = sourceTeam === "enemy" ? [state.player, ...state.allies] : state.enemies;
   targets.forEach((unit) => {
     if (unit.hp <= 0 || unit.downed) return;
@@ -1007,6 +1019,11 @@ function updateProjectiles(dt) {
 
     if (p.kind === "flashbang") {
       state.effects.push({ kind: "flash", x: p.x, y: p.y, r: 140, life: 0.65, color: "#fff1a6" });
+      state.effects.push({ kind: "shockwave", x: p.x, y: p.y, r: 180, life: 0.4, color: "#fff4b8" });
+      state.effects.push({ kind: "burst", x: p.x, y: p.y, r: 92, life: 0.2, color: "#fffdf0" });
+      if (Math.hypot(state.player.x - p.x, state.player.y - p.y) < 220) {
+        triggerScreenFlash("rgba(255,248,220,0.42)", 0.2);
+      }
       state.enemies.forEach((e) => {
         if (Math.hypot(e.x - p.x, e.y - p.y) < 190) e.cooldown += 1.2;
       });
@@ -1028,6 +1045,7 @@ function updateEffects(dt) {
     if (e.kind === "damageText") e.y += e.vy * dt;
   });
   state.effects = state.effects.filter((e) => e.life > 0);
+  if (state.screenFlashTimer > 0) state.screenFlashTimer = Math.max(0, state.screenFlashTimer - dt);
 }
 
 function handleInteract() {
@@ -1601,6 +1619,33 @@ function drawEffects() {
       ctx.restore();
       return;
     }
+    if (e.kind === "shockwave") {
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, e.life * 2.2);
+      ctx.strokeStyle = e.color;
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.arc(e.x - state.camera.x, e.y - state.camera.y, e.r * (1.2 - e.life * 0.35), 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+      return;
+    }
+    if (e.kind === "burst") {
+      ctx.save();
+      ctx.translate(e.x - state.camera.x, e.y - state.camera.y);
+      ctx.globalAlpha = Math.max(0, e.life * 4);
+      ctx.strokeStyle = e.color;
+      ctx.lineWidth = 3;
+      for (let i = 0; i < 10; i++) {
+        const a = (Math.PI * 2 * i) / 10;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a) * 6, Math.sin(a) * 6);
+        ctx.lineTo(Math.cos(a) * e.r * (1.05 - e.life), Math.sin(a) * e.r * (1.05 - e.life));
+        ctx.stroke();
+      }
+      ctx.restore();
+      return;
+    }
     if (e.kind === "flash") {
       ctx.save();
       ctx.globalAlpha = Math.max(0, e.life * 1.7);
@@ -1719,6 +1764,15 @@ function drawKillBanner() {
   ctx.fillText(state.killBannerText || "적 처치", WIDTH / 2, 101);
   ctx.restore();
   ctx.textAlign = "left";
+}
+
+function drawScreenFlash() {
+  if (state.screenFlashTimer <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = Math.min(1, state.screenFlashTimer * 3.2);
+  ctx.fillStyle = state.screenFlashColor || "rgba(255,245,210,0.38)";
+  ctx.fillRect(0, 0, WIDTH, HEIGHT);
+  ctx.restore();
 }
 
 function drawMinimap() {
@@ -1954,6 +2008,7 @@ function render() {
   drawMessage();
   drawHitMarkers();
   drawKillBanner();
+  drawScreenFlash();
   drawOverlay();
 }
 
