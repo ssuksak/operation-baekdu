@@ -54,12 +54,21 @@ body {
   color: var(--muted);
 }
 
+.topbar button {
+  align-self: center;
+  background: linear-gradient(180deg, #b6f493, #78ba63);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.22);
+}
+
 .panel {
-  background: var(--panel);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0)),
+    var(--panel);
   border: 1px solid var(--panel-border);
   border-radius: 14px;
   padding: 12px 14px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(10px);
 }
 
 .stats,
@@ -67,10 +76,36 @@ body {
   flex: 1;
 }
 
+.stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.stats div {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.stats strong {
+  color: #f4ffd2;
+}
+
 .squad ul {
   margin: 8px 0 0;
-  padding-left: 18px;
+  padding-left: 0;
   color: var(--muted);
+  list-style: none;
+}
+
+.squad li {
+  margin: 6px 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.045);
+  border: 1px solid rgba(255,255,255,0.05);
 }
 
 .class-select {
@@ -109,6 +144,16 @@ button {
   font-weight: 700;
   color: #08100c;
   background: var(--accent);
+  cursor: pointer;
+  transition: transform 0.08s ease, filter 0.12s ease, box-shadow 0.12s ease;
+}
+
+button:hover {
+  filter: brightness(1.05);
+}
+
+button:active {
+  transform: translateY(1px) scale(0.98);
 }
 
 .class-btn {
@@ -131,11 +176,20 @@ button {
 .command-btn.active {
   background: var(--accent);
   color: #102015;
+  box-shadow: 0 0 0 2px rgba(216, 255, 191, 0.18);
 }
 
 .status-line {
   width: 100%;
   color: var(--muted);
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+.status-line strong {
+  color: #f4ffd2;
 }
 
 .game-shell {
@@ -219,6 +273,15 @@ button {
 .help {
   color: var(--muted);
   line-height: 1.6;
+  display: grid;
+  gap: 8px;
+}
+
+.help div {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.035);
+  border: 1px solid rgba(255,255,255,0.04);
 }
 
 @media (max-width: 768px) {
@@ -240,5 +303,9 @@ button {
 
   .help {
     font-size: 14px;
+  }
+
+  .stats {
+    grid-template-columns: 1fr;
   }
 }
