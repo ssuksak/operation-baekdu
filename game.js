@@ -1224,6 +1224,18 @@ function drawCoverVisual(c) {
   if (c.type === "building") {
     drawRoundedRect(x, y, c.w, c.h, 10, "#8a949e", "#d7dfe6");
     drawRoundedRect(x + 8, y + 8, c.w - 16, c.h - 16, 8, "#6f7881");
+    ctx.fillStyle = "rgba(255,255,255,0.09)";
+    ctx.beginPath();
+    ctx.moveTo(x + 10, y + 14);
+    ctx.lineTo(x + c.w - 14, y + 14);
+    ctx.lineTo(x + c.w - 26, y + 26);
+    ctx.lineTo(x + 22, y + 26);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#5a4742";
+    ctx.fillRect(x + c.w * 0.42, y + c.h - 34, 18, 26);
+    ctx.fillStyle = "rgba(35,25,22,0.45)";
+    ctx.fillRect(x + c.w * 0.42 + 12, y + c.h - 34, 4, 26);
     ctx.fillStyle = "rgba(210,230,255,0.28)";
     for (let row = 0; row < Math.max(1, Math.floor(c.h / 48)); row++) {
       for (let col = 0; col < Math.max(1, Math.floor(c.w / 42)); col++) {
@@ -1253,6 +1265,13 @@ function drawCoverVisual(c) {
     ctx.moveTo(x, y + c.h / 2);
     ctx.lineTo(x + c.w, y + c.h / 2);
     ctx.stroke();
+    ctx.strokeStyle = "rgba(92,70,58,0.35)";
+    for (let i = 14; i < c.w; i += 22) {
+      ctx.beginPath();
+      ctx.moveTo(x + i, y + 4);
+      ctx.lineTo(x + i - 6, y + c.h - 4);
+      ctx.stroke();
+    }
     return;
   }
 
@@ -1263,17 +1282,26 @@ function drawCoverVisual(c) {
 
   ctx.fillStyle = "#85906f";
   ctx.beginPath();
-  ctx.ellipse(x + c.w * 0.34, y + c.h * 0.52, c.w * 0.22, c.h * 0.34, 0.1, 0, Math.PI * 2);
-  ctx.ellipse(x + c.w * 0.57, y + c.h * 0.46, c.w * 0.24, c.h * 0.32, -0.08, 0, Math.PI * 2);
-  ctx.ellipse(x + c.w * 0.72, y + c.h * 0.60, c.w * 0.16, c.h * 0.24, 0.25, 0, Math.PI * 2);
+  ctx.moveTo(x + c.w * 0.1, y + c.h * 0.82);
+  ctx.lineTo(x + c.w * 0.26, y + c.h * 0.24);
+  ctx.lineTo(x + c.w * 0.48, y + c.h * 0.12);
+  ctx.lineTo(x + c.w * 0.62, y + c.h * 0.42);
+  ctx.lineTo(x + c.w * 0.8, y + c.h * 0.16);
+  ctx.lineTo(x + c.w * 0.92, y + c.h * 0.7);
+  ctx.lineTo(x + c.w * 0.72, y + c.h * 0.9);
+  ctx.lineTo(x + c.w * 0.28, y + c.h * 0.96);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.12)";
+  ctx.beginPath();
+  ctx.moveTo(x + c.w * 0.28, y + c.h * 0.26);
+  ctx.lineTo(x + c.w * 0.46, y + c.h * 0.16);
+  ctx.lineTo(x + c.w * 0.38, y + c.h * 0.54);
+  ctx.closePath();
   ctx.fill();
   ctx.strokeStyle = "#c7d3b1";
   ctx.lineWidth = 2;
   ctx.stroke();
-  ctx.fillStyle = "rgba(255,255,255,0.10)";
-  ctx.beginPath();
-  ctx.ellipse(x + c.w * 0.35, y + c.h * 0.35, c.w * 0.13, c.h * 0.12, 0, 0, Math.PI * 2);
-  ctx.fill();
 }
 
 function drawAtmospherics() {
@@ -1313,6 +1341,13 @@ function drawTerrain() {
       ctx.beginPath();
       ctx.ellipse(sx + zone.w / 2, sy + zone.h / 2, zone.w / 2, zone.h / 2, 0, 0, Math.PI * 2);
       ctx.fill();
+      const ridge = ctx.createLinearGradient(sx, sy, sx + zone.w, sy + zone.h);
+      ridge.addColorStop(0, "rgba(210,235,180,0.10)");
+      ridge.addColorStop(1, "rgba(35,65,36,0.18)");
+      ctx.fillStyle = ridge;
+      ctx.beginPath();
+      ctx.ellipse(sx + zone.w / 2, sy + zone.h / 2, zone.w / 2, zone.h / 2, 0, 0, Math.PI * 2);
+      ctx.fill();
       ctx.strokeStyle = "rgba(230,255,210,0.10)";
       for (let i = 1; i <= 3; i++) {
         ctx.beginPath();
@@ -1327,6 +1362,13 @@ function drawTerrain() {
         );
         ctx.stroke();
       }
+      ctx.strokeStyle = "rgba(40,75,44,0.28)";
+      ctx.beginPath();
+      ctx.moveTo(sx + zone.w * 0.16, sy + zone.h * 0.72);
+      ctx.lineTo(sx + zone.w * 0.34, sy + zone.h * 0.46);
+      ctx.lineTo(sx + zone.w * 0.56, sy + zone.h * 0.52);
+      ctx.lineTo(sx + zone.w * 0.8, sy + zone.h * 0.28);
+      ctx.stroke();
     } else if (zone.type === "road") {
       drawRoundedRect(sx, sy, zone.w, zone.h, 16, "#7a7568", "#a39d8d");
       ctx.fillStyle = "rgba(90,75,55,0.18)";
@@ -1362,6 +1404,19 @@ function drawTerrain() {
         ctx.beginPath();
         ctx.arc(tx + 8, ty + 8, 9, 0, Math.PI * 2);
         ctx.fill();
+      }
+      ctx.fillStyle = "rgba(64,44,28,0.46)";
+      for (let i = 0; i < 7; i++) {
+        const tx = sx + 22 + ((i * 53) % Math.max(1, zone.w - 30));
+        const ty = sy + 18 + ((i * 47) % Math.max(1, zone.h - 28));
+        ctx.fillRect(tx, ty + 6, 4, 10);
+        ctx.fillStyle = "rgba(42,98,40,0.92)";
+        ctx.beginPath();
+        ctx.arc(tx + 2, ty + 4, 9, 0, Math.PI * 2);
+        ctx.arc(tx - 4, ty + 8, 7, 0, Math.PI * 2);
+        ctx.arc(tx + 8, ty + 8, 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "rgba(64,44,28,0.46)";
       }
     }
   });
