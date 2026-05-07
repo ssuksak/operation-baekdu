@@ -554,11 +554,26 @@ function isInBrush(unit) {
   );
 }
 
+function isOnHill(unit) {
+  return state.terrain.some((zone) => {
+    if (zone.type !== "hill") return false;
+    const rx = zone.w / 2;
+    const ry = zone.h / 2;
+    const cx = zone.x + rx;
+    const cy = zone.y + ry;
+    const nx = (unit.x - cx) / rx;
+    const ny = (unit.y - cy) / ry;
+    return nx * nx + ny * ny <= 1;
+  });
+}
+
 function isVisibleToSquad(target) {
   const viewers = [state.player, ...state.allies].filter((u) => u.hp > 0 && !u.downed);
   return viewers.some((viewer) => {
     const baseRange = viewer === state.player ? 340 : 230;
-    const adjustedRange = isInBrush(target) ? baseRange * 0.55 : baseRange;
+    const hillBonus = isOnHill(viewer) ? 90 : 0;
+    const exposedPenalty = isOnHill(target) ? 35 : 0;
+    const adjustedRange = isInBrush(target) ? (baseRange + hillBonus + exposedPenalty) * 0.48 : baseRange + hillBonus + exposedPenalty;
     return dist(viewer, target) < adjustedRange && hasLineOfSight(viewer, target);
   });
 }
@@ -711,7 +726,7 @@ function nearestEnemy(unit, range = 280) {
   state.enemies.forEach((enemy) => {
     if (enemy.hp <= 0) return;
     const d = dist(unit, enemy);
-    const vision = range + (unit.visionBoost > 0 ? 120 : 0);
+    const vision = range + (unit.visionBoost > 0 ? 120 : 0) + (isOnHill(unit) ? 80 : 0) + (isOnHill(enemy) ? 30 : 0);
     if (d < bestD && d < vision && hasLineOfSight(unit, enemy)) {
       best = enemy;
       bestD = d;
@@ -743,7 +758,9 @@ function nearestPlayerTarget(enemy, range = 260) {
   let bestD = range;
   candidates.forEach((u) => {
     const d = dist(enemy, u);
-    if (d < bestD && hasLineOfSight(enemy, u)) {
+    const detectionRange = range + (isOnHill(enemy) ? 70 : 0) + (isOnHill(u) ? 25 : 0);
+    const brushFactor = isInBrush(u) ? 0.6 : 1;
+    if (d < bestD && d < detectionRange * brushFactor && hasLineOfSight(enemy, u)) {
       best = u;
       bestD = d;
     }
@@ -770,7 +787,13 @@ function alertNearbyEnemies(origin, radius = 180) {
 }
 
 function emitNoise(x, y, radius, sourceTeam = "player") {
-  state.noiseBursts.push({ x, y, radius, life: 0.55, sourceTeam });
+  const sourceUnit = sourceTeam === "player"
+    ? state.player
+    : sourceTeam === "ally"
+    ? state.allies.find((a) => Math.hypot(a.x - x, a.y - y) < 8) || null
+    : state.enemies.find((e) => Math.hypot(e.x - x, e.y - y) < 8) || null;
+  const adjustedRadius = sourceUnit && isInBrush(sourceUnit) ? radius * 0.72 : radius;
+  state.noiseBursts.push({ x, y, radius: adjustedRadius, life: 0.55, sourceTeam });
 }
 
 function findNearestCover(unit) {
