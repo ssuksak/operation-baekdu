@@ -1905,7 +1905,12 @@ function drawObjectives() {
     ctx.fillRect(state.intel.x - state.camera.x - 8, state.intel.y - state.camera.y - 10, 16, 20);
   }
 
-  if (state.extraction) {
+  const shouldShowExtraction =
+    !!state.extraction &&
+    (state.selectedMission === "reconSweep" || state.selectedMission === "intelRaid"
+      ? state.objectivePhase === "extract"
+      : true);
+  if (shouldShowExtraction) {
     ctx.strokeStyle = state.selectedMission === "reconSweep" ? "#ffe082" : "#89f7c6";
     ctx.lineWidth = 4;
     ctx.beginPath();
