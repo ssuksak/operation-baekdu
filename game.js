@@ -78,6 +78,8 @@ const missionButtons = [...document.querySelectorAll(".mission-btn")];
 const commandButtons = [...document.querySelectorAll(".command-btn")];
 const commandTextEl = document.getElementById("commandText");
 const alertTextEl = document.getElementById("alertText");
+const phaseTextEl = document.getElementById("phaseText");
+const interactHintEl = document.getElementById("interactHint");
 const fireBtn = document.getElementById("fireBtn");
 const skillBtn = document.getElementById("skillBtn");
 const interactBtn = document.getElementById("interactBtn");
@@ -494,6 +496,8 @@ function updateHud() {
       : state.objectivePhase === "retrieve"
       ? `자료 회수 / ${objectiveDistance}m`
       : `탈출 지점으로 복귀 / ${objectiveDistance}m`;
+  if (phaseTextEl) phaseTextEl.textContent = getPhaseGuideText();
+  if (interactHintEl) interactHintEl.textContent = getInteractHint();
   commandTextEl.textContent =
     state.squadCommand === "follow" ? "집결" : state.squadCommand === "hold" ? "고정" : "돌격";
   alertTextEl.textContent = state.alertLevel;
@@ -567,6 +571,29 @@ function getCurrentObjectiveTarget() {
   if (state.objectivePhase === "disableJammer") return state.jammer;
   if (state.objectivePhase === "retrieve") return state.intel;
   return state.extraction;
+}
+
+function getPhaseGuideText() {
+  if (state.selectedMission === "outpostDefense") {
+    return `방어 단계 · 잔여 웨이브 ${state.wavesRemaining} · 다음 증원 ${Math.max(0, Math.ceil(state.waveTimer))}초`;
+  }
+  if (state.objectivePhase === "disableJammer") return "1단계 · 교란기를 찾아 파괴하라";
+  if (state.objectivePhase === "retrieve") return "2단계 · 확보한 구역에서 정보 자료를 회수하라";
+  return "3단계 · 탈출 지점까지 분대를 생존시켜 복귀하라";
+}
+
+function getInteractHint() {
+  const p = state.player;
+  const downedAlly = state.allies.find((ally) => ally.downed && dist(p, ally) < 42);
+  if (downedAlly) return `${classConfigs[downedAlly.role].label} 회복 가능 · 작전 버튼 / E`;
+  const supply = state.supplies.find((item) => !item.used && Math.hypot(p.x - item.x, p.y - item.y) < 40);
+  if (supply) return supply.type === "ammo" ? "탄약 보급 가능 · 작전 버튼 / E" : "의무 보급품 사용 가능 · 작전 버튼 / E";
+  if (state.selectedMission !== "outpostDefense") {
+    if (state.jammer && !state.jammer.disabled && Math.hypot(p.x - state.jammer.x, p.y - state.jammer.y) < 42) return "교란기 파괴 가능 · 작전 버튼 / E";
+    if (state.jammer?.disabled && state.intel && !state.intel.collected && Math.hypot(p.x - state.intel.x, p.y - state.intel.y) < 40) return "정보 자료 회수 가능 · 작전 버튼 / E";
+    if (state.objectivePhase === "extract" && state.extraction && Math.hypot(p.x - state.extraction.x, p.y - state.extraction.y) < 48) return "탈출 완료 가능 · 작전 버튼 / E";
+  }
+  return "근처 목표나 보급품에 접근하면 상호작용 가능";
 }
 
 function hasLineOfSight(a, b) {
