@@ -1,5 +1,71 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
+let audioCtx = null;
+
+function ensureAudio() {
+  if (!audioCtx) {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return null;
+    audioCtx = new Ctx();
+  }
+  if (audioCtx.state === "suspended") audioCtx.resume();
+  return audioCtx;
+}
+
+function playTone(freq, duration, type = "square", volume = 0.03, sweepTo = null) {
+  const ac = ensureAudio();
+  if (!ac) return;
+  const now = ac.currentTime;
+  const osc = ac.createOscillator();
+  const gain = ac.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, now);
+  if (sweepTo) osc.frequency.exponentialRampToValueAtTime(sweepTo, now + duration);
+  gain.gain.setValueAtTime(volume, now);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+  osc.connect(gain).connect(ac.destination);
+  osc.start(now);
+  osc.stop(now + duration);
+}
+
+function playNoiseBurst(duration = 0.08, volume = 0.018) {
+  const ac = ensureAudio();
+  if (!ac) return;
+  const now = ac.currentTime;
+  const buffer = ac.createBuffer(1, Math.floor(ac.sampleRate * duration), ac.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+  const source = ac.createBufferSource();
+  const filter = ac.createBiquadFilter();
+  const gain = ac.createGain();
+  filter.type = "highpass";
+  filter.frequency.value = 700;
+  gain.gain.setValueAtTime(volume, now);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+  source.buffer = buffer;
+  source.connect(filter).connect(gain).connect(ac.destination);
+  source.start(now);
+}
+
+function playShotSound(shooter) {
+  if (shooter === state.player) {
+    playTone(shooter.role === "marksman" ? 210 : shooter.role === "heavy" ? 120 : 165, 0.06, "square", 0.035, 90);
+    playNoiseBurst(0.05, 0.012);
+    return;
+  }
+  if (Math.hypot(shooter.x - state.player.x, shooter.y - state.player.y) < 420) {
+    playTone(110, 0.04, "triangle", 0.012, 70);
+  }
+}
+
+function playExplosionSound(strength = 1) {
+  playNoiseBurst(0.12 * strength, 0.022 * strength);
+  playTone(90, 0.14 * strength, "sawtooth", 0.028 * strength, 40);
+}
+
+function playUiChirp(freq = 720, freq2 = 980, volume = 0.02) {
+  playTone(freq, 0.05, "triangle", volume, freq2);
+}
 
 const hpEl = document.getElementById("hp");
 const ammoEl = document.getElementById("ammo");
@@ -451,6 +517,7 @@ function triggerEventBanner(text, color = "#ffe082", seconds = 2.2) {
   state.eventBannerText = text;
   state.eventBannerColor = color;
   state.eventBannerTimer = seconds;
+  playUiChirp(color === "#ffb0a0" ? 380 : 720, color === "#ffb0a0" ? 300 : 980, color === "#ffb0a0" ? 0.018 : 0.02);
 }
 
 function clamp(v, min, max) {
@@ -547,6 +614,7 @@ function shoot(shooter, angle) {
   shooter.cooldown = shooter.fireRate;
   shooter.ammo -= 1;
   if (shooter === state.player) state.stats.shots += 1;
+  playShotSound(shooter);
   const spread =
     shooter.role === "heavy"
       ? 0.14
@@ -692,6 +760,7 @@ function triggerScreenFlash(color, amount) {
 }
 
 function triggerExplosion(x, y, radius, damage, sourceTeam) {
+  playExplosionSound(sourceTeam === "enemy" ? 1 : 0.9);
   state.effects.push({ x, y, r: radius, life: 0.45, color: "#ffbb66" });
   state.effects.push({ kind: "shockwave", x, y, r: radius * 1.4, life: 0.42, color: "#ffb866" });
   state.effects.push({ kind: "burst", x, y, r: radius * 0.75, life: 0.24, color: "#ffd3a0" });
@@ -1031,6 +1100,7 @@ function updateProjectiles(dt) {
     if (!arrived) return true;
 
     if (p.kind === "flashbang") {
+      playExplosionSound(0.8);
       state.effects.push({ kind: "flash", x: p.x, y: p.y, r: 140, life: 0.65, color: "#fff1a6" });
       state.effects.push({ kind: "shockwave", x: p.x, y: p.y, r: 180, life: 0.4, color: "#fff4b8" });
       state.effects.push({ kind: "burst", x: p.x, y: p.y, r: 92, life: 0.2, color: "#fffdf0" });
@@ -1041,6 +1111,7 @@ function updateProjectiles(dt) {
         if (Math.hypot(e.x - p.x, e.y - p.y) < 190) e.cooldown += 1.2;
       });
     } else if (p.kind === "scoutPulse") {
+      playUiChirp(540, 860, 0.018);
       state.effects.push({ kind: "pulse", x: p.x, y: p.y, r: 220, life: 0.9, color: "#c88cff" });
       state.enemies.forEach((e) => {
         if (Math.hypot(e.x - p.x, e.y - p.y) < 420) {
@@ -2164,6 +2235,8 @@ window.addEventListener("keyup", (e) => {
   if (e.key === "d" || e.key === "D") input.right = false;
   if (e.code === "Space") input.skill = false;
 });
+
+window.addEventListener("pointerdown", ensureAudio, { passive: true });
 
 canvas.addEventListener("mousemove", (e) => {
   const rect = canvas.getBoundingClientRect();
