@@ -208,6 +208,8 @@ const state = {
   terrain: [],
   supplies: [],
   intel: null,
+  reconA: null,
+  reconB: null,
   jammer: null,
   extraction: null,
   defendZone: null,
@@ -288,6 +290,57 @@ function createUnit(x, y, team, role, opts = {}) {
 }
 
 function getMissionConfig() {
+  if (state.selectedMission === "reconSweep") {
+    return {
+      objectiveText: "정찰 지점 확보 후 탈출",
+      playerSpawn: { x: 520, y: 2260 },
+      allySpawns: [
+        { x: 460, y: 2210, color: "#86f096" },
+        { x: 560, y: 2200, color: "#72dcff" },
+        { x: 610, y: 2280, color: "#ffc76d" },
+      ],
+      cover: [
+        makeRect(760, 2120, 150, 34, "sandbag"),
+        makeRect(1180, 1870, 170, 40, "rock"),
+        makeRect(1660, 1490, 120, 220, "wall"),
+        makeRect(2100, 960, 220, 180, "building"),
+        makeRect(2870, 780, 200, 46, "rock"),
+        makeRect(3180, 1280, 180, 170, "building"),
+        makeRect(3520, 920, 140, 36, "sandbag"),
+      ],
+      terrain: [
+        { type: "hill", x: 120, y: 1820, w: 820, h: 440 },
+        { type: "brush", x: 980, y: 1930, w: 360, h: 220 },
+        { type: "road", x: 1240, y: 1480, w: 2140, h: 120 },
+        { type: "hill", x: 2080, y: 300, w: 940, h: 420 },
+        { type: "brush", x: 2700, y: 980, w: 340, h: 220 },
+        { type: "brush", x: 3340, y: 620, w: 280, h: 180 },
+      ],
+      supplies: [
+        { x: 1010, y: 2020, radius: 20, type: "ammo", used: false },
+        { x: 2440, y: 1360, radius: 20, type: "med", used: false },
+      ],
+      enemies: [
+        createUnit(1320, 1880, "enemy", "rifleman", { color: "#ff7c7c", hp: 68, maxHp: 68, patrol: [{ x: 1240, y: 1930 }, { x: 1430, y: 1830 }] }),
+        createUnit(2010, 1100, "enemy", "marksman", { color: "#ff8ad8", hp: 82, maxHp: 82, patrol: [{ x: 1940, y: 1040 }, { x: 2160, y: 1180 }] }),
+        createUnit(2540, 1420, "enemy", "grenadier", { color: "#ffb05e", hp: 94, maxHp: 94, patrol: [{ x: 2460, y: 1360 }, { x: 2650, y: 1490 }] }),
+        createUnit(3200, 970, "enemy", "rifleman", { color: "#ff7c7c", hp: 70, maxHp: 70, patrol: [{ x: 3120, y: 910 }, { x: 3340, y: 1020 }] }),
+        createUnit(3560, 760, "enemy", "heavy", { color: "#ff845d", hp: 145, maxHp: 145 }),
+      ],
+      defendZone: null,
+      extraction: { x: 3820, y: 420, radius: 42 },
+      intel: null,
+      jammer: null,
+      reconA: { x: 1480, y: 1880, radius: 26, complete: false },
+      reconB: { x: 2960, y: 980, radius: 26, complete: false },
+      phase: "reconAlpha",
+      missionClock: 0,
+      wavesRemaining: 0,
+      waveTimer: 0,
+      intro: "2개 정찰 지점을 확보한 뒤 탈출 지점으로 복귀하라",
+    };
+  }
+
   if (state.selectedMission === "outpostDefense") {
     return {
       objectiveText: "전초기지를 방어하라",
@@ -458,6 +511,8 @@ function resetGame() {
   state.terrain = mission.terrain || [];
   state.supplies = mission.supplies || [];
   state.intel = mission.intel;
+  state.reconA = mission.reconA || null;
+  state.reconB = mission.reconB || null;
   state.jammer = mission.jammer || null;
   state.extraction = mission.extraction;
   state.defendZone = mission.defendZone;
@@ -498,6 +553,12 @@ function updateHud() {
   objectiveTextEl.textContent =
     state.selectedMission === "outpostDefense"
       ? `전초기지 방어 ${Math.max(0, Math.ceil(state.missionClock))}초 / ${objectiveDistance}m`
+      : state.selectedMission === "reconSweep"
+      ? state.objectivePhase === "reconAlpha"
+        ? `정찰 지점 A 확보 / ${objectiveDistance}m`
+        : state.objectivePhase === "reconBravo"
+        ? `정찰 지점 B 확보 / ${objectiveDistance}m`
+        : `탈출 지점으로 복귀 / ${objectiveDistance}m`
       : state.objectivePhase === "disableJammer"
       ? `교란기 파괴 / ${objectiveDistance}m`
       : state.objectivePhase === "retrieve"
@@ -594,6 +655,11 @@ function isOnScreen(x, y, padding = 80) {
 
 function getCurrentObjectiveTarget() {
   if (state.selectedMission === "outpostDefense") return state.defendZone;
+  if (state.selectedMission === "reconSweep") {
+    if (state.objectivePhase === "reconAlpha") return state.reconA;
+    if (state.objectivePhase === "reconBravo") return state.reconB;
+    return state.extraction;
+  }
   if (state.objectivePhase === "disableJammer") return state.jammer;
   if (state.objectivePhase === "retrieve") return state.intel;
   return state.extraction;
@@ -602,6 +668,11 @@ function getCurrentObjectiveTarget() {
 function getPhaseGuideText() {
   if (state.selectedMission === "outpostDefense") {
     return `방어 단계 · 잔여 웨이브 ${state.wavesRemaining} · 다음 증원 ${Math.max(0, Math.ceil(state.waveTimer))}초`;
+  }
+  if (state.selectedMission === "reconSweep") {
+    if (state.objectivePhase === "reconAlpha") return "1단계 · 정찰 지점 A를 확보하라";
+    if (state.objectivePhase === "reconBravo") return "2단계 · 정찰 지점 B를 확보하라";
+    return "3단계 · 탈출 지점까지 복귀하라";
   }
   if (state.objectivePhase === "disableJammer") return "1단계 · 교란기를 찾아 파괴하라";
   if (state.objectivePhase === "retrieve") return "2단계 · 확보한 구역에서 정보 자료를 회수하라";
@@ -614,6 +685,11 @@ function getInteractHint() {
   if (downedAlly) return `${classConfigs[downedAlly.role].label} 회복 가능 · 작전 버튼 / E`;
   const supply = state.supplies.find((item) => !item.used && Math.hypot(p.x - item.x, p.y - item.y) < 40);
   if (supply) return supply.type === "ammo" ? "탄약 보급 가능 · 작전 버튼 / E" : "의무 보급품 사용 가능 · 작전 버튼 / E";
+  if (state.selectedMission === "reconSweep") {
+    if (state.reconA && !state.reconA.complete && Math.hypot(p.x - state.reconA.x, p.y - state.reconA.y) < 40) return "정찰 지점 A 확보 가능 · 작전 버튼 / E";
+    if (state.reconB && !state.reconB.complete && Math.hypot(p.x - state.reconB.x, p.y - state.reconB.y) < 40) return "정찰 지점 B 확보 가능 · 작전 버튼 / E";
+    if (state.objectivePhase === "extract" && state.extraction && Math.hypot(p.x - state.extraction.x, p.y - state.extraction.y) < 48) return "탈출 완료 가능 · 작전 버튼 / E";
+  }
   if (state.selectedMission !== "outpostDefense") {
     if (state.jammer && !state.jammer.disabled && Math.hypot(p.x - state.jammer.x, p.y - state.jammer.y) < 42) return "교란기 파괴 가능 · 작전 버튼 / E";
     if (state.jammer?.disabled && state.intel && !state.intel.collected && Math.hypot(p.x - state.intel.x, p.y - state.intel.y) < 40) return "정보 자료 회수 가능 · 작전 버튼 / E";
@@ -1279,6 +1355,36 @@ function handleInteract() {
 
   if (state.selectedMission === "outpostDefense") return;
 
+  if (state.selectedMission === "reconSweep") {
+    if (state.reconA && !state.reconA.complete && Math.hypot(p.x - state.reconA.x, p.y - state.reconA.y) < 40) {
+      state.reconA.complete = true;
+      state.objectivePhase = "reconBravo";
+      setMessage("정찰 지점 A 확보 완료. 다음 지점으로 이동하라", 4);
+      triggerEventBanner("정찰 지점 A 확보", "#9fe7ff", 2.6);
+      updateHud();
+      return;
+    }
+    if (state.reconB && !state.reconB.complete && Math.hypot(p.x - state.reconB.x, p.y - state.reconB.y) < 40) {
+      state.reconB.complete = true;
+      state.objectivePhase = "extract";
+      state.enemies.push(
+        createUnit(3300, 880, "enemy", "rifleman", { color: "#ff7c7c", hp: 78, maxHp: 78 }),
+        createUnit(3440, 980, "enemy", "marksman", { color: "#ff8ad8", hp: 82, maxHp: 82 })
+      );
+      setMessage("정찰 지점 B 확보 완료. 탈출 지점으로 복귀하라", 4);
+      triggerEventBanner("정찰 완료 · 탈출 단계 시작", "#b6f7ff", 2.8);
+      updateHud();
+      return;
+    }
+    if (state.objectivePhase === "extract" && state.extraction && Math.hypot(p.x - state.extraction.x, p.y - state.extraction.y) < 48) {
+      state.victory = true;
+      if (!state.stats.finishedAt) state.stats.finishedAt = performance.now();
+      setMessage("정찰 성공! 수집한 정보를 회수했다", 10);
+      triggerEventBanner("정찰 임무 완수", "#b8ffbe", 3.2);
+      return;
+    }
+  }
+
   if (state.jammer && !state.jammer.disabled && Math.hypot(p.x - state.jammer.x, p.y - state.jammer.y) < 42) {
     state.jammer.disabled = true;
     state.objectivePhase = "retrieve";
@@ -1723,6 +1829,22 @@ function drawObjectives() {
     ctx.beginPath();
     ctx.arc(state.defendZone.x - state.camera.x, state.defendZone.y - state.camera.y, state.defendZone.radius, 0, Math.PI * 2);
     ctx.stroke();
+  }
+
+  if (state.selectedMission === "reconSweep") {
+    [state.reconA, state.reconB].forEach((point, index) => {
+      if (!point || point.complete) return;
+      if (!isVisibleToSquad(point) && state.objectivePhase !== (index === 0 ? "reconAlpha" : "reconBravo")) return;
+      ctx.fillStyle = index === 0 ? "rgba(120,220,255,0.28)" : "rgba(180,255,210,0.28)";
+      ctx.beginPath();
+      ctx.arc(point.x - state.camera.x, point.y - state.camera.y, point.radius + 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = index === 0 ? "#8fe6ff" : "#b8ffd2";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(point.x - state.camera.x, point.y - state.camera.y, point.radius, 0, Math.PI * 2);
+      ctx.stroke();
+    });
   }
 
   state.supplies.forEach((supply) => {
