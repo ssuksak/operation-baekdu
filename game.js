@@ -203,6 +203,7 @@ const state = {
   bullets: [],
   projectiles: [],
   effects: [],
+  noiseBursts: [],
   cover: [],
   terrain: [],
   supplies: [],
@@ -645,6 +646,12 @@ function shoot(shooter, angle) {
   shooter.ammo -= 1;
   if (shooter === state.player) state.stats.shots += 1;
   playShotSound(shooter);
+  emitNoise(
+    shooter.x,
+    shooter.y,
+    shooter.role === "heavy" ? 420 : shooter.role === "marksman" ? 320 : 360,
+    shooter.team
+  );
   const spread =
     shooter.role === "heavy"
       ? 0.14
@@ -762,6 +769,10 @@ function alertNearbyEnemies(origin, radius = 180) {
   });
 }
 
+function emitNoise(x, y, radius, sourceTeam = "player") {
+  state.noiseBursts.push({ x, y, radius, life: 0.55, sourceTeam });
+}
+
 function findNearestCover(unit) {
   let best = null;
   let bestD = Infinity;
@@ -791,6 +802,7 @@ function triggerScreenFlash(color, amount) {
 
 function triggerExplosion(x, y, radius, damage, sourceTeam) {
   playExplosionSound(sourceTeam === "enemy" ? 1 : 0.9);
+  emitNoise(x, y, radius * 7, sourceTeam);
   state.effects.push({ x, y, r: radius, life: 0.45, color: "#ffbb66" });
   state.effects.push({ kind: "shockwave", x, y, r: radius * 1.4, life: 0.42, color: "#ffb866" });
   state.effects.push({ kind: "burst", x, y, r: radius * 0.75, life: 0.24, color: "#ffd3a0" });
@@ -1021,6 +1033,15 @@ function updateEnemy(enemy, dt) {
       moveToward(enemy, nearestCover.x, nearestCover.y, 0.5, dt);
     }
   } else {
+    const heardNoise = state.noiseBursts.find((noise) =>
+      noise.sourceTeam !== "enemy" && Math.hypot(enemy.x - noise.x, enemy.y - noise.y) < noise.radius
+    );
+    if (heardNoise) {
+      enemy.lastKnownTargetX = heardNoise.x;
+      enemy.lastKnownTargetY = heardNoise.y;
+      enemy.searchTimer = Math.max(enemy.searchTimer, 3.2);
+      enemy.alert = "search";
+    }
     if (enemy.searchTimer > 0) {
       enemy.searchTimer -= dt;
       enemy.alert = "search";
@@ -1144,6 +1165,7 @@ function updateProjectiles(dt) {
 
     if (p.kind === "flashbang") {
       playExplosionSound(0.8);
+      emitNoise(p.x, p.y, 420, "player");
       state.effects.push({ kind: "flash", x: p.x, y: p.y, r: 140, life: 0.65, color: "#fff1a6" });
       state.effects.push({ kind: "shockwave", x: p.x, y: p.y, r: 180, life: 0.4, color: "#fff4b8" });
       state.effects.push({ kind: "burst", x: p.x, y: p.y, r: 92, life: 0.2, color: "#fffdf0" });
@@ -1172,6 +1194,8 @@ function updateEffects(dt) {
     if (e.kind === "damageText") e.y += e.vy * dt;
   });
   state.effects = state.effects.filter((e) => e.life > 0);
+  state.noiseBursts.forEach((n) => (n.life -= dt));
+  state.noiseBursts = state.noiseBursts.filter((n) => n.life > 0);
   if (state.screenFlashTimer > 0) state.screenFlashTimer = Math.max(0, state.screenFlashTimer - dt);
 }
 
@@ -1740,6 +1764,19 @@ function drawProjectiles() {
 }
 
 function drawEffects() {
+  state.noiseBursts.forEach((n) => {
+    if (!isOnScreen(n.x, n.y, 180)) return;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, n.life * 0.45);
+    ctx.strokeStyle = "rgba(180,220,255,0.55)";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8, 8]);
+    ctx.beginPath();
+    ctx.arc(n.x - state.camera.x, n.y - state.camera.y, n.radius * (1.15 - n.life * 0.4), 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+    ctx.setLineDash([]);
+  });
   state.effects.forEach((e) => {
     const sampleX = e.kind === "tracer" ? e.x1 : e.x;
     const sampleY = e.kind === "tracer" ? e.y1 : e.y;
