@@ -786,6 +786,17 @@ function alertNearbyEnemies(origin, radius = 180) {
   });
 }
 
+function broadcastEnemyContact(caller, target, radius = 260) {
+  state.enemies.forEach((enemy) => {
+    if (enemy === caller || enemy.hp <= 0) return;
+    if (Math.hypot(enemy.x - caller.x, enemy.y - caller.y) > radius) return;
+    enemy.alert = "search";
+    enemy.lastKnownTargetX = target.x;
+    enemy.lastKnownTargetY = target.y;
+    enemy.searchTimer = Math.max(enemy.searchTimer, 3.6);
+  });
+}
+
 function emitNoise(x, y, radius, sourceTeam = "player") {
   const sourceUnit = sourceTeam === "player"
     ? state.player
@@ -1027,6 +1038,7 @@ function updateEnemy(enemy, dt) {
     enemy.lastKnownTargetX = target.x;
     enemy.lastKnownTargetY = target.y;
     enemy.searchTimer = 4.5;
+    broadcastEnemyContact(enemy, target, enemy.role === "marksman" ? 320 : 270);
     enemy.angle = Math.atan2(target.y - enemy.y, target.x - enemy.x);
     const d = dist(enemy, target);
     const lowHp = enemy.hp < enemy.maxHp * 0.4;
