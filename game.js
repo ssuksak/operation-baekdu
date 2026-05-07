@@ -534,9 +534,11 @@ function resetGame() {
   state.killBannerTimer = 0;
   state.killBannerText = "";
   state.screenFlashTimer = 0;
+  state.screenFlashColor = "rgba(255,245,210,0.38)";
   state.playerDamageTimer = 0;
   state.eventBannerTimer = 0;
   state.eventBannerText = "";
+  state.eventBannerColor = "#ffe082";
   state.recoilKick = 0;
   state.cameraShakeTimer = 0;
   state.cameraShakeStrength = 0;
@@ -551,6 +553,9 @@ function resetGame() {
   input.fire = false;
   input.interact = false;
   input.touchAiming = false;
+  input.mouseX = state.player.x + 100;
+  input.mouseY = state.player.y;
+  resetStick();
   skillBtn.textContent = cfg.skillName;
   if (state.selectedMission === "reconSweep") {
     triggerEventBanner("정찰 소탕 · A/B 지점 확보 후 탈출", "#9fe7ff", 2.8);
