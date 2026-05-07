@@ -2571,24 +2571,31 @@ canvas.addEventListener("touchstart", (e) => {
   updateTouchAim(touch.clientX, touch.clientY, rect);
 });
 
-canvas.addEventListener("touchmove", (e) => {
+function handleAimTouchMove(e) {
   if (aimTouchId === null) return;
   const rect = canvas.getBoundingClientRect();
   const touch = [...e.touches].find((t) => t.identifier === aimTouchId);
   if (!touch) return;
   updateTouchAim(touch.clientX, touch.clientY, rect);
-});
+}
 
-canvas.addEventListener("touchend", (e) => {
+function handleAimTouchEnd(e) {
   if (![...e.changedTouches].some((t) => t.identifier === aimTouchId)) return;
   aimTouchId = null;
   input.touchAiming = false;
-});
+}
 
-canvas.addEventListener("touchcancel", () => {
+function clearAimTouch() {
   aimTouchId = null;
   input.touchAiming = false;
-});
+}
+
+canvas.addEventListener("touchmove", handleAimTouchMove);
+window.addEventListener("touchmove", handleAimTouchMove, { passive: false });
+canvas.addEventListener("touchend", handleAimTouchEnd);
+window.addEventListener("touchend", handleAimTouchEnd, { passive: false });
+canvas.addEventListener("touchcancel", clearAimTouch);
+window.addEventListener("touchcancel", clearAimTouch, { passive: false });
 
 function beginPlayerFire() {
   input.fire = true;
@@ -2689,18 +2696,23 @@ moveStick.addEventListener("touchstart", (e) => {
   updateStick(t.clientX, t.clientY);
 });
 
-moveStick.addEventListener("touchmove", (e) => {
+function handleStickTouchMove(e) {
   e.preventDefault();
   const t = [...e.changedTouches].find((touch) => touch.identifier === stickTouchId);
   if (t) updateStick(t.clientX, t.clientY);
-});
+}
 
-moveStick.addEventListener("touchend", (e) => {
+function handleStickTouchEnd(e) {
   const t = [...e.changedTouches].find((touch) => touch.identifier === stickTouchId);
   if (t) resetStick();
-});
+}
 
+moveStick.addEventListener("touchmove", handleStickTouchMove);
+window.addEventListener("touchmove", handleStickTouchMove, { passive: false });
+moveStick.addEventListener("touchend", handleStickTouchEnd);
+window.addEventListener("touchend", handleStickTouchEnd, { passive: false });
 moveStick.addEventListener("touchcancel", resetStick);
+window.addEventListener("touchcancel", resetStick, { passive: false });
 window.addEventListener("blur", releaseTransientInputs);
 window.addEventListener("pagehide", releaseTransientInputs);
 
