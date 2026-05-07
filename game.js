@@ -277,6 +277,9 @@ function createUnit(x, y, team, role, opts = {}) {
     specialCooldown: 0,
     skillCooldown: 0,
     visionBoost: 0,
+    lastKnownTargetX: x,
+    lastKnownTargetY: y,
+    searchTimer: 0,
   };
 }
 
@@ -986,6 +989,9 @@ function updateEnemy(enemy, dt) {
   if (target) {
     enemy.target = target;
     enemy.alert = "alert";
+    enemy.lastKnownTargetX = target.x;
+    enemy.lastKnownTargetY = target.y;
+    enemy.searchTimer = 4.5;
     enemy.angle = Math.atan2(target.y - enemy.y, target.x - enemy.x);
     const d = dist(enemy, target);
     const lowHp = enemy.hp < enemy.maxHp * 0.4;
@@ -1015,8 +1021,17 @@ function updateEnemy(enemy, dt) {
       moveToward(enemy, nearestCover.x, nearestCover.y, 0.5, dt);
     }
   } else {
-    if (enemy.alert === "alert") enemy.alert = "search";
-    if (enemy.patrol && enemy.patrol.length > 0) {
+    if (enemy.searchTimer > 0) {
+      enemy.searchTimer -= dt;
+      enemy.alert = "search";
+      const searchPoint = { x: enemy.lastKnownTargetX, y: enemy.lastKnownTargetY };
+      const d = dist(enemy, searchPoint);
+      if (d > 18) {
+        moveToward(enemy, searchPoint.x, searchPoint.y, 0.48, dt);
+      } else {
+        enemy.angle += dt * 1.8;
+      }
+    } else if (enemy.patrol && enemy.patrol.length > 0) {
       const point = enemy.patrol[enemy.patrolIndex];
       const d = Math.hypot(point.x - enemy.x, point.y - enemy.y);
       if (d < 10) {
@@ -1025,6 +1040,7 @@ function updateEnemy(enemy, dt) {
         moveToward(enemy, point.x, point.y, 0.38, dt);
       }
     } else {
+      enemy.alert = "idle";
       enemy.aiTimer -= dt;
       if (enemy.aiTimer <= 0) {
         enemy.aiTimer = 1.5 + Math.random() * 2;
