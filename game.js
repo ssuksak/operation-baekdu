@@ -2,6 +2,17 @@ const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 let audioCtx = null;
 
+function resizeCanvasToDisplaySize() {
+  const rect = canvas.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const displayWidth = Math.max(1, Math.round(rect.width * dpr));
+  const displayHeight = Math.max(1, Math.round(rect.height * dpr));
+  if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
+    canvas.width = displayWidth;
+    canvas.height = displayHeight;
+  }
+}
+
 function ensureAudio() {
   if (!audioCtx) {
     const Ctx = window.AudioContext || window.webkitAudioContext;
@@ -2504,6 +2515,7 @@ function render() {
 }
 
 function loop(timestamp) {
+  resizeCanvasToDisplaySize();
   const dt = Math.min(0.033, (timestamp - state.lastTime) / 1000 || 0.016);
   state.lastTime = timestamp;
   update(dt);
@@ -2742,6 +2754,8 @@ moveStick.addEventListener("touchcancel", resetStick);
 window.addEventListener("touchcancel", resetStick, { passive: false });
 window.addEventListener("blur", releaseTransientInputs);
 window.addEventListener("pagehide", releaseTransientInputs);
+window.addEventListener("resize", resizeCanvasToDisplaySize);
+window.addEventListener("orientationchange", resizeCanvasToDisplaySize);
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState !== "visible") {
     releaseTransientInputs();
@@ -2772,6 +2786,7 @@ commandButtons.forEach((btn) => {
 
 restartBtn.addEventListener("click", resetGame);
 
+resizeCanvasToDisplaySize();
 resetGame();
 setSquadCommand("follow");
 requestAnimationFrame(loop);
