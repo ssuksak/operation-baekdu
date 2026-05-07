@@ -99,7 +99,7 @@ const classConfigs = {
     magSize: 30,
     reserve: 90,
     fireRate: 0.16,
-    damage: 18,
+    damage: 20,
     speed: 170,
     skillCooldown: 10,
     skillName: "섬광탄",
@@ -111,7 +111,7 @@ const classConfigs = {
     magSize: 24,
     reserve: 72,
     fireRate: 0.18,
-    damage: 15,
+    damage: 16,
     speed: 160,
     skillCooldown: 12,
     skillName: "응급치료",
@@ -123,7 +123,7 @@ const classConfigs = {
     magSize: 26,
     reserve: 78,
     fireRate: 0.2,
-    damage: 17,
+    damage: 18,
     speed: 155,
     skillCooldown: 14,
     skillName: "엄폐 설치",
@@ -135,7 +135,7 @@ const classConfigs = {
     magSize: 22,
     reserve: 66,
     fireRate: 0.13,
-    damage: 14,
+    damage: 15,
     speed: 190,
     skillCooldown: 9,
     skillName: "정찰 드론",
@@ -236,7 +236,7 @@ const state = {
 };
 
 function makeRect(x, y, w, h, type = "rock") {
-  return { x, y, w, h, type, hp: type === "placedCover" ? 70 : Infinity };
+  return { x, y, w, h, type, hp: type === "placedCover" ? 90 : Infinity };
 }
 
 function createUnit(x, y, team, role, opts = {}) {
@@ -331,8 +331,8 @@ function getMissionConfig() {
       intel: null,
       phase: "defend",
       missionClock: 320,
-      wavesRemaining: 9,
-      waveTimer: 18,
+      wavesRemaining: 8,
+      waveTimer: 20,
       intro: "전초기지를 사수하고 적의 파상공세를 막아라",
     };
   }
@@ -876,7 +876,7 @@ function usePlayerSkill() {
   if (p.role === "medic") {
     [p, ...state.allies].forEach((u) => {
       if (dist(p, u) < 90 && u.hp > 0) {
-        u.hp = Math.min(u.maxHp, u.hp + 28);
+        u.hp = Math.min(u.maxHp, u.hp + 32);
       }
     });
     state.effects.push({ kind: "pulse", x: p.x, y: p.y, r: 96, life: 0.55, color: "#9cffb8" });
@@ -886,7 +886,7 @@ function usePlayerSkill() {
     state.effects.push({ kind: "pulse", x: p.x + Math.cos(p.angle) * 28, y: p.y + Math.sin(p.angle) * 28, r: 54, life: 0.45, color: "#ffd27a" });
     setMessage("공병 엄폐물 설치");
   } else if (p.role === "scout") {
-    p.visionBoost = 7;
+    p.visionBoost = 9;
     launchProjectile("scoutPulse", p.x + Math.cos(p.angle) * 22, p.y + Math.sin(p.angle) * 22, p.angle, 180, 360, "#c88cff");
     setMessage("정찰 드론으로 적 위치 노출");
   } else {
@@ -1042,8 +1042,8 @@ function updateEnemy(enemy, dt) {
     }
 
     if (enemy.role === "grenadier" && enemy.specialCooldown <= 0 && d > 120 && d < 260) {
-      triggerExplosion(target.x + (Math.random() - 0.5) * 28, target.y + (Math.random() - 0.5) * 28, 46, 26, "enemy");
-      enemy.specialCooldown = 5.5;
+      triggerExplosion(target.x + (Math.random() - 0.5) * 28, target.y + (Math.random() - 0.5) * 28, 46, 22, "enemy");
+      enemy.specialCooldown = 6.5;
       setMessage("적 유탄병이 폭발 공격을 감행했다!", 1.8);
     } else {
       if (enemy.role === "heavy") {
