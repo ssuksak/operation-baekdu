@@ -2738,6 +2738,11 @@ moveStick.addEventListener("touchcancel", resetStick);
 window.addEventListener("touchcancel", resetStick, { passive: false });
 window.addEventListener("blur", releaseTransientInputs);
 window.addEventListener("pagehide", releaseTransientInputs);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible") {
+    releaseTransientInputs();
+  }
+});
 
 classButtons.forEach((btn) => {
   btn.addEventListener("click", () => {
