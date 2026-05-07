@@ -8,8 +8,8 @@ function resizeCanvasToDisplaySize() {
   const displayWidth = Math.max(1, Math.round(rect.width * dpr));
   const displayHeight = Math.max(1, Math.round(rect.height * dpr));
   if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
-    canvas.width = displayWidth;
-    canvas.height = displayHeight;
+    canvas.width = WIDTH = displayWidth;
+    canvas.height = HEIGHT = displayHeight;
   }
 }
 
@@ -109,8 +109,8 @@ const interactBtn = document.getElementById("interactBtn");
 const moveStick = document.getElementById("moveStick");
 const stickKnob = moveStick.querySelector(".stick-knob");
 
-const WIDTH = canvas.width;
-const HEIGHT = canvas.height;
+let WIDTH = canvas.width;
+let HEIGHT = canvas.height;
 const WORLD_WIDTH = 4200;
 const WORLD_HEIGHT = 2800;
 
