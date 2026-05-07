@@ -13,6 +13,10 @@ function resizeCanvasToDisplaySize() {
   }
 }
 
+function suppressBrowserInteraction(e) {
+  e.preventDefault();
+}
+
 function ensureAudio() {
   if (!audioCtx) {
     const Ctx = window.AudioContext || window.webkitAudioContext;
@@ -2548,6 +2552,12 @@ window.addEventListener("keyup", (e) => {
 });
 
 window.addEventListener("pointerdown", ensureAudio, { passive: true });
+canvas.addEventListener("contextmenu", suppressBrowserInteraction);
+canvas.addEventListener("dragstart", suppressBrowserInteraction);
+fireBtn.addEventListener("contextmenu", suppressBrowserInteraction);
+interactBtn.addEventListener("contextmenu", suppressBrowserInteraction);
+skillBtn.addEventListener("contextmenu", suppressBrowserInteraction);
+moveStick.addEventListener("contextmenu", suppressBrowserInteraction);
 
 canvas.addEventListener("mousemove", (e) => {
   const rect = canvas.getBoundingClientRect();
