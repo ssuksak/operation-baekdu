@@ -263,6 +263,39 @@ const state = {
   lastTime: 0,
 };
 
+const PREFERENCES_KEY = "operationBaekduPreferences";
+
+function savePreferences() {
+  try {
+    localStorage.setItem(
+      PREFERENCES_KEY,
+      JSON.stringify({
+        selectedClass: state.selectedClass,
+        selectedMission: state.selectedMission,
+        squadCommand: state.squadCommand,
+      })
+    );
+  } catch {}
+}
+
+function loadPreferences() {
+  try {
+    const raw = localStorage.getItem(PREFERENCES_KEY);
+    if (!raw) return "follow";
+    const parsed = JSON.parse(raw);
+    if (parsed.selectedClass && classConfigs[parsed.selectedClass]) {
+      state.selectedClass = parsed.selectedClass;
+    }
+    if (parsed.selectedMission && ["intelRaid", "reconSweep", "outpostDefense"].includes(parsed.selectedMission)) {
+      state.selectedMission = parsed.selectedMission;
+    }
+    if (parsed.squadCommand && ["follow", "hold", "assault"].includes(parsed.squadCommand)) {
+      state.squadCommand = parsed.squadCommand;
+    }
+  } catch {}
+  return state.squadCommand;
+}
+
 function makeRect(x, y, w, h, type = "rock") {
   return { x, y, w, h, type, hp: type === "placedCover" ? 90 : Infinity };
 }
@@ -918,6 +951,7 @@ function setSquadCommand(command) {
     });
   }
   commandButtons.forEach((btn) => btn.classList.toggle("active", btn.dataset.command === command));
+  savePreferences();
   updateHud();
 }
 
@@ -2788,6 +2822,7 @@ classButtons.forEach((btn) => {
     classButtons.forEach((b) => b.classList.remove("active"));
     btn.classList.add("active");
     state.selectedClass = btn.dataset.class;
+    savePreferences();
     resetGame();
   });
 });
@@ -2797,6 +2832,7 @@ missionButtons.forEach((btn) => {
     missionButtons.forEach((b) => b.classList.remove("active"));
     btn.classList.add("active");
     state.selectedMission = btn.dataset.mission;
+    savePreferences();
     resetGame();
   });
 });
@@ -2807,7 +2843,8 @@ commandButtons.forEach((btn) => {
 
 restartBtn.addEventListener("click", resetGame);
 
+const startupCommand = loadPreferences();
 resizeCanvasToDisplaySize();
 resetGame();
-setSquadCommand("follow");
+setSquadCommand(startupCommand || "follow");
 requestAnimationFrame(loop);
