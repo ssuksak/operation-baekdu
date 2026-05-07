@@ -2665,6 +2665,23 @@ function resetStick() {
   stickTouchId = null;
 }
 
+function releaseTransientInputs() {
+  input.up = false;
+  input.down = false;
+  input.left = false;
+  input.right = false;
+  input.fire = false;
+  input.interact = false;
+  input.touchAiming = false;
+  aimTouchId = null;
+  aimAnchorClientX = 0;
+  aimAnchorClientY = 0;
+  fireBtn.classList.remove("active");
+  interactBtn.classList.remove("active");
+  skillBtn.classList.remove("active");
+  resetStick();
+}
+
 moveStick.addEventListener("touchstart", (e) => {
   e.preventDefault();
   const t = e.changedTouches[0];
@@ -2684,6 +2701,8 @@ moveStick.addEventListener("touchend", (e) => {
 });
 
 moveStick.addEventListener("touchcancel", resetStick);
+window.addEventListener("blur", releaseTransientInputs);
+window.addEventListener("pagehide", releaseTransientInputs);
 
 classButtons.forEach((btn) => {
   btn.addEventListener("click", () => {
