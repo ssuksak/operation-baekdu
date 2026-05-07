@@ -557,6 +557,9 @@ function resetGame() {
   input.mouseX = state.player.x + 100;
   input.mouseY = state.player.y;
   resetStick();
+  aimTouchId = null;
+  aimAnchorClientX = 0;
+  aimAnchorClientY = 0;
   classButtons.forEach((btn) => btn.classList.toggle("active", btn.dataset.class === state.selectedClass));
   missionButtons.forEach((btn) => btn.classList.toggle("active", btn.dataset.mission === state.selectedMission));
   commandButtons.forEach((btn) => btn.classList.toggle("active", btn.dataset.command === state.squadCommand));
