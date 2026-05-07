@@ -519,6 +519,7 @@ function resetGame() {
   state.bullets = [];
   state.projectiles = [];
   state.effects = [];
+  state.noiseBursts = [];
   state.objectivePhase = mission.phase;
   state.alertLevel = "낮음";
   state.missionClock = mission.missionClock;
@@ -528,6 +529,17 @@ function resetGame() {
   state.messageTimer = 4;
   state.gameOver = false;
   state.victory = false;
+  state.hitMarkerTimer = 0;
+  state.killMarkerTimer = 0;
+  state.killBannerTimer = 0;
+  state.killBannerText = "";
+  state.screenFlashTimer = 0;
+  state.playerDamageTimer = 0;
+  state.eventBannerTimer = 0;
+  state.eventBannerText = "";
+  state.recoilKick = 0;
+  state.cameraShakeTimer = 0;
+  state.cameraShakeStrength = 0;
   state.stats = {
     shots: 0,
     hits: 0,
@@ -536,6 +548,9 @@ function resetGame() {
     startedAt: performance.now(),
     finishedAt: null,
   };
+  input.fire = false;
+  input.interact = false;
+  input.touchAiming = false;
   skillBtn.textContent = cfg.skillName;
   if (state.selectedMission === "reconSweep") {
     triggerEventBanner("정찰 소탕 · A/B 지점 확보 후 탈출", "#9fe7ff", 2.8);
