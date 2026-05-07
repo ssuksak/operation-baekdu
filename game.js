@@ -160,6 +160,9 @@ const state = {
   screenFlashTimer: 0,
   screenFlashColor: "rgba(255,245,210,0.38)",
   playerDamageTimer: 0,
+  eventBannerTimer: 0,
+  eventBannerText: "",
+  eventBannerColor: "#ffe082",
   lastTime: 0,
 };
 
@@ -442,6 +445,12 @@ function updateHud() {
 function setMessage(text, seconds = 2.8) {
   state.message = text;
   state.messageTimer = seconds;
+}
+
+function triggerEventBanner(text, color = "#ffe082", seconds = 2.2) {
+  state.eventBannerText = text;
+  state.eventBannerColor = color;
+  state.eventBannerTimer = seconds;
 }
 
 function clamp(v, min, max) {
@@ -1091,6 +1100,7 @@ function handleInteract() {
       createUnit(2460, 1490, "enemy", "grenadier", { color: "#ffb05e", hp: 92, maxHp: 92, damage: 20 })
     );
     setMessage("교란기 파괴 완료. 자료를 확보하라", 4);
+    triggerEventBanner("1단계 완료 · 자료 확보로 전환", "#ffd78a", 2.8);
     updateHud();
     return;
   }
@@ -1103,6 +1113,7 @@ function handleInteract() {
       createUnit(3380, 1760, "enemy", "rifleman", { color: "#ff7c7c", hp: 85, maxHp: 85, damage: 18 })
     );
     setMessage("정보 자료 확보. 탈출 지점으로 복귀하라", 4);
+    triggerEventBanner("2단계 완료 · 탈출 단계 시작", "#ffe69a", 2.8);
     updateHud();
     return;
   }
@@ -1111,6 +1122,7 @@ function handleInteract() {
     state.victory = true;
     if (!state.stats.finishedAt) state.stats.finishedAt = performance.now();
     setMessage("작전 성공! 분대가 임무를 완수했다", 10);
+    triggerEventBanner("임무 완수", "#b8ffbe", 3.2);
   }
 }
 
@@ -1155,6 +1167,7 @@ function update(dt) {
         createUnit(1940, 960 + Math.random() * 120, "enemy", "heavy", { color: "#ff6b6b", hp: 148, maxHp: 148, damage: 18 })
       );
       setMessage("적 증원 도착! 방어선을 유지하라");
+      triggerEventBanner(`적 증원 도착 · 잔여 웨이브 ${state.wavesRemaining}`, "#ffb0a0", 2.6);
     }
   }
 
@@ -1168,6 +1181,7 @@ function update(dt) {
   if (state.killMarkerTimer > 0) state.killMarkerTimer = Math.max(0, state.killMarkerTimer - dt);
   if (state.killBannerTimer > 0) state.killBannerTimer = Math.max(0, state.killBannerTimer - dt);
   if (state.playerDamageTimer > 0) state.playerDamageTimer = Math.max(0, state.playerDamageTimer - dt);
+  if (state.eventBannerTimer > 0) state.eventBannerTimer = Math.max(0, state.eventBannerTimer - dt);
   updateHud();
 }
 
@@ -1998,6 +2012,23 @@ function drawMessage() {
   ctx.textAlign = "left";
 }
 
+function drawEventBanner() {
+  if (state.eventBannerTimer <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = Math.min(1, state.eventBannerTimer * 1.4);
+  ctx.fillStyle = "rgba(8,12,18,0.78)";
+  ctx.fillRect(WIDTH / 2 - 220, 72, 440, 40);
+  ctx.strokeStyle = state.eventBannerColor || "#ffe082";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(WIDTH / 2 - 220, 72, 440, 40);
+  ctx.fillStyle = state.eventBannerColor || "#ffe082";
+  ctx.font = "bold 18px sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText(state.eventBannerText, WIDTH / 2, 98);
+  ctx.restore();
+  ctx.textAlign = "left";
+}
+
 function getResultGrade() {
   if (!state.stats) return "C";
   if (state.gameOver) return "F";
@@ -2094,6 +2125,7 @@ function render() {
   drawObjectivePointer();
   drawMinimap();
   drawMessage();
+  drawEventBanner();
   drawHitMarkers();
   drawKillBanner();
   drawScreenFlash();
