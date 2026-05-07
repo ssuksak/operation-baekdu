@@ -2051,27 +2051,49 @@ canvas.addEventListener("mousemove", (e) => {
   input.mouseY = pos.y;
 });
 
+let aimTouchId = null;
+let aimAnchorClientX = 0;
+let aimAnchorClientY = 0;
+
+function updateTouchAim(clientX, clientY, rect) {
+  const maxRadius = 150;
+  const dx = ((clientX - aimAnchorClientX) / rect.width) * WIDTH * 1.25;
+  const dy = ((clientY - aimAnchorClientY) / rect.height) * HEIGHT * 1.25;
+  const len = Math.hypot(dx, dy) || 1;
+  const clamped = Math.min(maxRadius, len);
+  const aimDx = len < 6 ? Math.cos(state.player.angle) * 70 : (dx / len) * clamped;
+  const aimDy = len < 6 ? Math.sin(state.player.angle) * 70 : (dy / len) * clamped;
+  input.mouseX = state.player.x + aimDx;
+  input.mouseY = state.player.y + aimDy;
+  input.touchAiming = true;
+}
+
 canvas.addEventListener("touchstart", (e) => {
-  const touch = e.touches[0];
-  if (!touch) return;
   const rect = canvas.getBoundingClientRect();
-  const pos = screenToWorld(touch.clientX, touch.clientY, rect);
-  input.mouseX = pos.x;
-  input.mouseY = pos.y;
-  input.touchAiming = touch.clientX > rect.left + rect.width * 0.5;
+  const touch = [...e.changedTouches].find((t) => t.clientX > rect.left + rect.width * 0.5);
+  if (!touch) return;
+  aimTouchId = touch.identifier;
+  aimAnchorClientX = touch.clientX;
+  aimAnchorClientY = touch.clientY;
+  updateTouchAim(touch.clientX, touch.clientY, rect);
 });
 
 canvas.addEventListener("touchmove", (e) => {
-  const touch = e.touches[0];
-  if (!touch) return;
+  if (aimTouchId === null) return;
   const rect = canvas.getBoundingClientRect();
-  const pos = screenToWorld(touch.clientX, touch.clientY, rect);
-  input.mouseX = pos.x;
-  input.mouseY = pos.y;
-  input.touchAiming = touch.clientX > rect.left + rect.width * 0.5;
+  const touch = [...e.touches].find((t) => t.identifier === aimTouchId);
+  if (!touch) return;
+  updateTouchAim(touch.clientX, touch.clientY, rect);
 });
 
-canvas.addEventListener("touchend", () => {
+canvas.addEventListener("touchend", (e) => {
+  if (![...e.changedTouches].some((t) => t.identifier === aimTouchId)) return;
+  aimTouchId = null;
+  input.touchAiming = false;
+});
+
+canvas.addEventListener("touchcancel", () => {
+  aimTouchId = null;
   input.touchAiming = false;
 });
 
