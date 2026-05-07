@@ -232,6 +232,9 @@ const state = {
   eventBannerTimer: 0,
   eventBannerText: "",
   eventBannerColor: "#ffe082",
+  recoilKick: 0,
+  cameraShakeTimer: 0,
+  cameraShakeStrength: 0,
   lastTime: 0,
 };
 
@@ -546,6 +549,10 @@ function screenToWorld(clientX, clientY, rect) {
 function updateCamera() {
   state.camera.x = clamp(state.player.x - WIDTH / 2, 0, WORLD_WIDTH - WIDTH);
   state.camera.y = clamp(state.player.y - HEIGHT / 2, 0, WORLD_HEIGHT - HEIGHT);
+  if (state.cameraShakeTimer > 0) {
+    state.camera.x = clamp(state.camera.x + (Math.random() - 0.5) * state.cameraShakeStrength, 0, WORLD_WIDTH - WIDTH);
+    state.camera.y = clamp(state.camera.y + (Math.random() - 0.5) * state.cameraShakeStrength, 0, WORLD_HEIGHT - HEIGHT);
+  }
 }
 
 function isInBrush(unit) {
@@ -661,6 +668,11 @@ function shoot(shooter, angle) {
   shooter.ammo -= 1;
   if (shooter === state.player) state.stats.shots += 1;
   playShotSound(shooter);
+  if (shooter === state.player) {
+    state.recoilKick = Math.min(1, state.recoilKick + 0.55);
+    state.cameraShakeTimer = 0.08;
+    state.cameraShakeStrength = shooter.role === "heavy" ? 12 : shooter.role === "marksman" ? 7 : 9;
+  }
   emitNoise(
     shooter.x,
     shooter.y,
@@ -1166,6 +1178,8 @@ function updateBullets(dt) {
           state.killMarkerTimer = 0.24;
           state.killBannerTimer = 0.75;
           state.killBannerText = `${classConfigs[t.role]?.label || "적"} 처치`;
+          state.cameraShakeTimer = 0.12;
+          state.cameraShakeStrength = Math.max(state.cameraShakeStrength, 14);
         }
         state.effects.push({
           kind: "damageText",
@@ -1355,6 +1369,8 @@ function update(dt) {
   if (state.killBannerTimer > 0) state.killBannerTimer = Math.max(0, state.killBannerTimer - dt);
   if (state.playerDamageTimer > 0) state.playerDamageTimer = Math.max(0, state.playerDamageTimer - dt);
   if (state.eventBannerTimer > 0) state.eventBannerTimer = Math.max(0, state.eventBannerTimer - dt);
+  if (state.recoilKick > 0) state.recoilKick = Math.max(0, state.recoilKick - dt * 3.4);
+  if (state.cameraShakeTimer > 0) state.cameraShakeTimer = Math.max(0, state.cameraShakeTimer - dt);
   updateHud();
 }
 
@@ -1993,6 +2009,7 @@ function drawAimReticle() {
   const py = state.player.y - state.camera.y;
   const sx = input.mouseX - state.camera.x;
   const sy = input.mouseY - state.camera.y;
+  const recoilSpread = state.recoilKick * 16;
   ctx.save();
   ctx.setLineDash([10, 7]);
   ctx.strokeStyle = "rgba(255,230,140,0.42)";
@@ -2012,17 +2029,17 @@ function drawAimReticle() {
   ctx.strokeStyle = "rgba(255,230,140,0.95)";
   ctx.lineWidth = 3;
   ctx.beginPath();
-  ctx.arc(sx, sy, 10, 0, Math.PI * 2);
+  ctx.arc(sx, sy, 10 + recoilSpread * 0.25, 0, Math.PI * 2);
   ctx.stroke();
   ctx.beginPath();
-  ctx.moveTo(sx - 14, sy);
-  ctx.lineTo(sx - 6, sy);
-  ctx.moveTo(sx + 6, sy);
-  ctx.lineTo(sx + 14, sy);
-  ctx.moveTo(sx, sy - 14);
-  ctx.lineTo(sx, sy - 6);
-  ctx.moveTo(sx, sy + 6);
-  ctx.lineTo(sx, sy + 14);
+  ctx.moveTo(sx - (14 + recoilSpread), sy);
+  ctx.lineTo(sx - (6 + recoilSpread * 0.5), sy);
+  ctx.moveTo(sx + (6 + recoilSpread * 0.5), sy);
+  ctx.lineTo(sx + (14 + recoilSpread), sy);
+  ctx.moveTo(sx, sy - (14 + recoilSpread));
+  ctx.lineTo(sx, sy - (6 + recoilSpread * 0.5));
+  ctx.moveTo(sx, sy + (6 + recoilSpread * 0.5));
+  ctx.lineTo(sx, sy + (14 + recoilSpread));
   ctx.stroke();
 }
 
