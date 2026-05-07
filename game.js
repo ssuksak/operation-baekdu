@@ -159,6 +159,7 @@ const state = {
   killBannerText: "",
   screenFlashTimer: 0,
   screenFlashColor: "rgba(255,245,210,0.38)",
+  playerDamageTimer: 0,
   lastTime: 0,
 };
 
@@ -973,6 +974,9 @@ function updateBullets(dt) {
           state.stats.hits += 1;
           state.hitMarkerTimer = 0.12;
         }
+        if (b.team === "enemy" && t === state.player) {
+          state.playerDamageTimer = 0.28;
+        }
         if (b.team !== "enemy") alertNearbyEnemies(t, 220);
         if (t.team !== "enemy" && t !== state.player && t.hp <= 0) {
           t.downed = true;
@@ -1163,6 +1167,7 @@ function update(dt) {
   if (state.hitMarkerTimer > 0) state.hitMarkerTimer = Math.max(0, state.hitMarkerTimer - dt);
   if (state.killMarkerTimer > 0) state.killMarkerTimer = Math.max(0, state.killMarkerTimer - dt);
   if (state.killBannerTimer > 0) state.killBannerTimer = Math.max(0, state.killBannerTimer - dt);
+  if (state.playerDamageTimer > 0) state.playerDamageTimer = Math.max(0, state.playerDamageTimer - dt);
   updateHud();
 }
 
@@ -1368,7 +1373,8 @@ function drawTerrain() {
 
 function drawUnit(unit) {
   if (unit.hp <= 0 && !unit.downed) return;
-  if (unit.team === "enemy" && !isVisibleToSquad(unit)) return;
+  const visibleEnemy = unit.team === "enemy" ? isVisibleToSquad(unit) : false;
+  if (unit.team === "enemy" && !visibleEnemy) return;
   const sx = unit.x - state.camera.x;
   const sy = unit.y - state.camera.y;
 
@@ -1429,6 +1435,22 @@ function drawUnit(unit) {
   }
 
   ctx.restore();
+
+  if (visibleEnemy) {
+    ctx.save();
+    ctx.strokeStyle = "rgba(255,90,90,0.98)";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(sx - 9, sy - unit.radius - 14);
+    ctx.lineTo(sx, sy - unit.radius - 5);
+    ctx.lineTo(sx + 9, sy - unit.radius - 14);
+    ctx.stroke();
+    ctx.fillStyle = "rgba(255,90,90,0.24)";
+    ctx.beginPath();
+    ctx.arc(sx, sy, unit.radius + 12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
 
   ctx.fillStyle = "rgba(0,0,0,0.55)";
   ctx.fillRect(sx - 16, sy - 24, 32, 5);
@@ -1775,6 +1797,17 @@ function drawScreenFlash() {
   ctx.restore();
 }
 
+function drawPlayerDamageVignette() {
+  if (state.playerDamageTimer <= 0) return;
+  const edge = ctx.createRadialGradient(WIDTH / 2, HEIGHT / 2, HEIGHT * 0.2, WIDTH / 2, HEIGHT / 2, HEIGHT * 0.82);
+  edge.addColorStop(0.55, "rgba(0,0,0,0)");
+  edge.addColorStop(1, `rgba(255,70,70,${Math.min(0.45, state.playerDamageTimer * 1.4)})`);
+  ctx.save();
+  ctx.fillStyle = edge;
+  ctx.fillRect(0, 0, WIDTH, HEIGHT);
+  ctx.restore();
+}
+
 function drawMinimap() {
   const mapW = 170;
   const mapH = 115;
@@ -2009,6 +2042,7 @@ function render() {
   drawHitMarkers();
   drawKillBanner();
   drawScreenFlash();
+  drawPlayerDamageVignette();
   drawOverlay();
 }
 
