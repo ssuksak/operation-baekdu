@@ -2601,6 +2601,10 @@ canvas.addEventListener("mousedown", () => beginPlayerFire());
 window.addEventListener("mouseup", () => (input.fire = false));
 
 function pressButtonStart(btn, handler) {
+  const release = () => {
+    btn.classList.remove("active");
+    handler(false);
+  };
   btn.addEventListener("touchstart", (e) => {
     e.preventDefault();
     btn.classList.add("active");
@@ -2608,8 +2612,7 @@ function pressButtonStart(btn, handler) {
   });
   btn.addEventListener("touchend", (e) => {
     e.preventDefault();
-    btn.classList.remove("active");
-    handler(false);
+    release();
   });
   btn.addEventListener("mousedown", (e) => {
     e.preventDefault();
@@ -2618,11 +2621,10 @@ function pressButtonStart(btn, handler) {
   });
   btn.addEventListener("mouseup", (e) => {
     e.preventDefault();
-    btn.classList.remove("active");
-    handler(false);
+    release();
   });
-  btn.addEventListener("mouseleave", () => btn.classList.remove("active"));
-  btn.addEventListener("touchcancel", () => btn.classList.remove("active"));
+  btn.addEventListener("mouseleave", release);
+  btn.addEventListener("touchcancel", release);
 }
 
 pressButtonStart(fireBtn, (v) => {
@@ -2631,6 +2633,7 @@ pressButtonStart(fireBtn, (v) => {
 });
 pressButtonStart(interactBtn, (v) => {
   if (v) input.interact = true;
+  else input.interact = false;
 });
 pressButtonStart(skillBtn, (v) => {
   if (v) usePlayerSkill();
@@ -2679,6 +2682,8 @@ moveStick.addEventListener("touchend", (e) => {
   const t = [...e.changedTouches].find((touch) => touch.identifier === stickTouchId);
   if (t) resetStick();
 });
+
+moveStick.addEventListener("touchcancel", resetStick);
 
 classButtons.forEach((btn) => {
   btn.addEventListener("click", () => {
