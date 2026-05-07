@@ -2608,12 +2608,15 @@ canvas.addEventListener("mousedown", () => beginPlayerFire());
 window.addEventListener("mouseup", () => (input.fire = false));
 
 function pressButtonStart(btn, handler) {
+  let activeTouchId = null;
   const release = () => {
+    activeTouchId = null;
     btn.classList.remove("active");
     handler(false);
   };
   btn.addEventListener("touchstart", (e) => {
     e.preventDefault();
+    activeTouchId = e.changedTouches[0]?.identifier ?? null;
     btn.classList.add("active");
     handler(true);
   });
@@ -2621,6 +2624,26 @@ function pressButtonStart(btn, handler) {
     e.preventDefault();
     release();
   });
+  window.addEventListener(
+    "touchend",
+    (e) => {
+      if (activeTouchId === null) return;
+      if ([...e.changedTouches].some((t) => t.identifier === activeTouchId)) {
+        release();
+      }
+    },
+    { passive: false }
+  );
+  window.addEventListener(
+    "touchcancel",
+    (e) => {
+      if (activeTouchId === null) return;
+      if ([...e.changedTouches].some((t) => t.identifier === activeTouchId)) {
+        release();
+      }
+    },
+    { passive: false }
+  );
   btn.addEventListener("mousedown", (e) => {
     e.preventDefault();
     btn.classList.add("active");
