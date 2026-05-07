@@ -537,6 +537,9 @@ function resetGame() {
     finishedAt: null,
   };
   skillBtn.textContent = cfg.skillName;
+  if (state.selectedMission === "reconSweep") {
+    triggerEventBanner("정찰 소탕 · A/B 지점 확보 후 탈출", "#9fe7ff", 2.8);
+  }
   updateCamera();
   updateHud();
 }
@@ -1844,6 +1847,11 @@ function drawObjectives() {
       ctx.beginPath();
       ctx.arc(point.x - state.camera.x, point.y - state.camera.y, point.radius, 0, Math.PI * 2);
       ctx.stroke();
+      ctx.fillStyle = index === 0 ? "#dff8ff" : "#eafff1";
+      ctx.font = "bold 18px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(index === 0 ? "A" : "B", point.x - state.camera.x, point.y - state.camera.y + 6);
+      ctx.textAlign = "left";
     });
   }
 
@@ -1883,11 +1891,16 @@ function drawObjectives() {
   }
 
   if (state.extraction) {
-    ctx.strokeStyle = "#89f7c6";
+    ctx.strokeStyle = state.selectedMission === "reconSweep" ? "#ffe082" : "#89f7c6";
     ctx.lineWidth = 4;
     ctx.beginPath();
     ctx.arc(state.extraction.x - state.camera.x, state.extraction.y - state.camera.y, state.extraction.radius, 0, Math.PI * 2);
     ctx.stroke();
+    if (state.selectedMission === "reconSweep") {
+      ctx.fillStyle = "#fff1a6";
+      ctx.font = "bold 14px sans-serif";
+      ctx.fillText("EX", state.extraction.x - state.camera.x - 10, state.extraction.y - state.camera.y + 5);
+    }
   }
 }
 
