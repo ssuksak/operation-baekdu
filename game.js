@@ -97,6 +97,7 @@ const ammoEl = document.getElementById("ammo");
 const objectiveTextEl = document.getElementById("objectiveText");
 const classNameEl = document.getElementById("className");
 const squadListEl = document.getElementById("squadList");
+const fullscreenBtn = document.getElementById("fullscreenBtn");
 const audioBtn = document.getElementById("audioBtn");
 const restartBtn = document.getElementById("restartBtn");
 const pauseBtn = document.getElementById("pauseBtn");
@@ -632,6 +633,7 @@ function resetGame() {
   commandButtons.forEach((btn) => btn.classList.toggle("active", btn.dataset.command === state.squadCommand));
   pauseBtn.textContent = "일시정지";
   audioBtn.textContent = state.audioMuted ? "음소거 해제" : "오디오 켜짐";
+  updateFullscreenButton();
   skillBtn.textContent = cfg.skillName;
   if (state.selectedMission === "reconSweep") {
     triggerEventBanner("정찰 소탕 · A/B 지점 확보 후 탈출", "#9fe7ff", 2.8);
@@ -671,6 +673,7 @@ function updateHud() {
   pauseBtn.textContent = state.paused ? "계속하기" : "일시정지";
 
   audioBtn.textContent = state.audioMuted ? "음소거 해제" : "오디오 켜짐";
+  updateFullscreenButton();
   squadListEl.innerHTML = "";
   const members = [state.player, ...state.allies];
   members.forEach((m) => {
@@ -989,6 +992,21 @@ function toggleAudioMuted(forceValue = null) {
   state.audioMuted = forceValue === null ? !state.audioMuted : !!forceValue;
   savePreferences();
   updateHud();
+}
+
+function updateFullscreenButton() {
+  fullscreenBtn.textContent = document.fullscreenElement ? "전체화면 종료" : "전체화면";
+}
+
+async function toggleFullscreen() {
+  try {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+    } else {
+      await document.documentElement.requestFullscreen();
+    }
+  } catch {}
+  updateFullscreenButton();
 }
 
 function alertNearbyEnemies(origin, radius = 180) {
@@ -2866,6 +2884,7 @@ document.addEventListener("visibilitychange", () => {
     releaseTransientInputs();
   }
 });
+document.addEventListener("fullscreenchange", updateFullscreenButton);
 
 classButtons.forEach((btn) => {
   btn.addEventListener("click", () => {
@@ -2892,6 +2911,7 @@ commandButtons.forEach((btn) => {
 });
 
 restartBtn.addEventListener("click", resetGame);
+fullscreenBtn.addEventListener("click", () => toggleFullscreen());
 audioBtn.addEventListener("click", () => toggleAudioMuted());
 pauseBtn.addEventListener("click", () => togglePause());
 
