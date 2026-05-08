@@ -8,6 +8,14 @@ const atmosphericsCache = {
   vignette: null,
 };
 
+const visibilityMaskCache = {
+  canvas: document.createElement("canvas"),
+  ctx: null,
+  width: 0,
+  height: 0,
+  scale: 0.5,
+};
+
 function resizeCanvasToDisplaySize() {
   const rect = canvas.getBoundingClientRect();
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -2635,6 +2643,57 @@ function drawMinimap() {
 }
 
 function drawVisibilityMask() {
+  if (state.performanceMode) {
+    const viewers = [state.player, ...state.allies].filter((u) => u.hp > 0 && !u.downed);
+    const scale = visibilityMaskCache.scale;
+    const targetWidth = Math.max(1, Math.floor(WIDTH * scale));
+    const targetHeight = Math.max(1, Math.floor(HEIGHT * scale));
+
+    if (!visibilityMaskCache.ctx) {
+      visibilityMaskCache.ctx = visibilityMaskCache.canvas.getContext("2d");
+    }
+    if (visibilityMaskCache.width !== targetWidth || visibilityMaskCache.height !== targetHeight) {
+      visibilityMaskCache.width = targetWidth;
+      visibilityMaskCache.height = targetHeight;
+      visibilityMaskCache.canvas.width = targetWidth;
+      visibilityMaskCache.canvas.height = targetHeight;
+      visibilityMaskCache.ctx = visibilityMaskCache.canvas.getContext("2d");
+    }
+
+    const maskCtx = visibilityMaskCache.ctx;
+    maskCtx.clearRect(0, 0, targetWidth, targetHeight);
+    maskCtx.fillStyle = "rgba(5, 8, 10, 0.56)";
+    maskCtx.fillRect(0, 0, targetWidth, targetHeight);
+    maskCtx.globalCompositeOperation = "destination-out";
+
+    viewers.forEach((viewer, index) => {
+      const sx = (viewer.x - state.camera.x) * scale;
+      const sy = (viewer.y - state.camera.y) * scale;
+      const radius = (index === 0 ? 280 : 185) * scale;
+
+      maskCtx.beginPath();
+      maskCtx.arc(sx, sy, radius * 0.72, 0, Math.PI * 2);
+      maskCtx.fill();
+
+      if (index === 0) {
+        const coneLength = 360 * scale;
+        const spread = 1.18;
+        maskCtx.beginPath();
+        maskCtx.moveTo(sx, sy);
+        maskCtx.arc(sx, sy, coneLength, viewer.angle - spread / 2, viewer.angle + spread / 2);
+        maskCtx.closePath();
+        maskCtx.fill();
+      }
+    });
+
+    maskCtx.globalCompositeOperation = "source-over";
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(visibilityMaskCache.canvas, 0, 0, targetWidth, targetHeight, 0, 0, WIDTH, HEIGHT);
+    ctx.restore();
+    return;
+  }
+
   ctx.save();
   ctx.fillStyle = "rgba(5, 8, 10, 0.52)";
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
