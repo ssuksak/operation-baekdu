@@ -2650,6 +2650,21 @@ window.addEventListener("keydown", (e) => {
     togglePause();
     return;
   }
+  if (e.key === "m" || e.key === "M") {
+    e.preventDefault();
+    toggleMinimap();
+    return;
+  }
+  if (e.key === "o" || e.key === "O") {
+    e.preventDefault();
+    toggleAudioMuted();
+    return;
+  }
+  if (e.key === "f" || e.key === "F") {
+    e.preventDefault();
+    toggleFullscreen();
+    return;
+  }
   if (state.paused) return;
   if (e.key === "w" || e.key === "W") input.up = true;
   if (e.key === "s" || e.key === "S") input.down = true;
