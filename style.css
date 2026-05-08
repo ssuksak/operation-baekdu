@@ -67,6 +67,12 @@ button,
   color: var(--muted);
 }
 
+.topbar-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
 .topbar button {
   align-self: center;
   background: linear-gradient(180deg, #b6f493, #78ba63);

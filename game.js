@@ -96,6 +96,7 @@ const objectiveTextEl = document.getElementById("objectiveText");
 const classNameEl = document.getElementById("className");
 const squadListEl = document.getElementById("squadList");
 const restartBtn = document.getElementById("restartBtn");
+const pauseBtn = document.getElementById("pauseBtn");
 const classButtons = [...document.querySelectorAll(".class-btn")];
 const missionButtons = [...document.querySelectorAll(".mission-btn")];
 const commandButtons = [...document.querySelectorAll(".command-btn")];
@@ -220,6 +221,7 @@ const state = {
   selectedClass: "rifleman",
   selectedMission: "intelRaid",
   squadCommand: "follow",
+  paused: false,
   player: null,
   allies: [],
   enemies: [],
@@ -585,6 +587,7 @@ function resetGame() {
   state.messageTimer = 4;
   state.gameOver = false;
   state.victory = false;
+  state.paused = false;
   state.hitMarkerTimer = 0;
   state.killMarkerTimer = 0;
   state.killBannerTimer = 0;
@@ -619,6 +622,7 @@ function resetGame() {
   classButtons.forEach((btn) => btn.classList.toggle("active", btn.dataset.class === state.selectedClass));
   missionButtons.forEach((btn) => btn.classList.toggle("active", btn.dataset.mission === state.selectedMission));
   commandButtons.forEach((btn) => btn.classList.toggle("active", btn.dataset.command === state.squadCommand));
+  pauseBtn.textContent = "일시정지";
   skillBtn.textContent = cfg.skillName;
   if (state.selectedMission === "reconSweep") {
     triggerEventBanner("정찰 소탕 · A/B 지점 확보 후 탈출", "#9fe7ff", 2.8);
@@ -655,6 +659,7 @@ function updateHud() {
   commandTextEl.textContent =
     state.squadCommand === "follow" ? "집결" : state.squadCommand === "hold" ? "고정" : "돌격";
   alertTextEl.textContent = state.alertLevel;
+  pauseBtn.textContent = state.paused ? "계속하기" : "일시정지";
 
   squadListEl.innerHTML = "";
   const members = [state.player, ...state.allies];
@@ -955,6 +960,21 @@ function setSquadCommand(command) {
   updateHud();
 }
 
+function togglePause(forceValue = null) {
+  if (state.gameOver || state.victory) return;
+  const nextPaused = forceValue === null ? !state.paused : !!forceValue;
+  if (state.paused === nextPaused) return;
+  state.paused = nextPaused;
+  if (state.paused) {
+    releaseTransientInputs();
+    playUiChirp(520, 360, 0.018);
+  } else {
+    state.lastTime = performance.now();
+    playUiChirp(620, 880, 0.018);
+  }
+  updateHud();
+}
+
 function alertNearbyEnemies(origin, radius = 180) {
   state.enemies.forEach((enemy) => {
     if (enemy.hp > 0 && dist(origin, enemy) < radius) enemy.alert = "alert";
@@ -1055,7 +1075,7 @@ function launchProjectile(kind, x, y, angle, distance, speed, color) {
 
 function usePlayerSkill() {
   const p = state.player;
-  if (p.skillCooldown > 0 || state.gameOver || state.victory) return;
+  if (p.skillCooldown > 0 || state.gameOver || state.victory || state.paused) return;
   const cfg = classConfigs[p.role];
   p.skillCooldown = cfg.skillCooldown;
 
@@ -2478,12 +2498,19 @@ function getElapsedSeconds() {
 }
 
 function drawOverlay() {
-  if (!state.gameOver && !state.victory) return;
+  if (!state.gameOver && !state.victory && !state.paused) return;
   ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
   ctx.fillStyle = "#fff";
   ctx.textAlign = "center";
   ctx.font = "bold 34px sans-serif";
+  if (state.paused && !state.gameOver && !state.victory) {
+    ctx.fillText("일시정지", WIDTH / 2, HEIGHT / 2 - 12);
+    ctx.font = "18px sans-serif";
+    ctx.fillText("P 또는 Esc, 상단 버튼으로 계속할 수 있습니다.", WIDTH / 2, HEIGHT / 2 + 28);
+    ctx.textAlign = "left";
+    return;
+  }
   ctx.fillText(state.victory ? "작전 성공" : "작전 실패", WIDTH / 2, HEIGHT / 2 - 12);
   ctx.font = "18px sans-serif";
   ctx.fillText(`작전 등급: ${getResultGrade()}`, WIDTH / 2, HEIGHT / 2 + 24);
@@ -2564,12 +2591,18 @@ function loop(timestamp) {
   resizeCanvasToDisplaySize();
   const dt = Math.min(0.033, (timestamp - state.lastTime) / 1000 || 0.016);
   state.lastTime = timestamp;
-  update(dt);
+  if (!state.paused) update(dt);
   render();
   requestAnimationFrame(loop);
 }
 
 window.addEventListener("keydown", (e) => {
+  if (e.key === "p" || e.key === "P" || e.key === "Escape") {
+    e.preventDefault();
+    togglePause();
+    return;
+  }
+  if (state.paused) return;
   if (e.key === "w" || e.key === "W") input.up = true;
   if (e.key === "s" || e.key === "S") input.down = true;
   if (e.key === "a" || e.key === "A") input.left = true;
@@ -2668,6 +2701,7 @@ canvas.addEventListener("touchcancel", clearAimTouch);
 window.addEventListener("touchcancel", clearAimTouch, { passive: false });
 
 function beginPlayerFire() {
+  if (state.paused) return;
   input.fire = true;
   if (state.player && !state.gameOver && !state.victory) {
     shoot(state.player, state.player.angle);
@@ -2842,6 +2876,7 @@ commandButtons.forEach((btn) => {
 });
 
 restartBtn.addEventListener("click", resetGame);
+pauseBtn.addEventListener("click", () => togglePause());
 
 const startupCommand = loadPreferences();
 resizeCanvasToDisplaySize();
