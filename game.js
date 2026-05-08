@@ -118,6 +118,7 @@ const ammoEl = document.getElementById("ammo");
 const objectiveTextEl = document.getElementById("objectiveText");
 const classNameEl = document.getElementById("className");
 const squadListEl = document.getElementById("squadList");
+const perfBtn = document.getElementById("perfBtn");
 const pointerBtn = document.getElementById("pointerBtn");
 const difficultyBtn = document.getElementById("difficultyBtn");
 const defaultsBtn = document.getElementById("defaultsBtn");
@@ -289,6 +290,7 @@ const state = {
   screenShakeEnabled: true,
   difficulty: "normal",
   objectivePointerVisible: true,
+  performanceMode: false,
   player: null,
   allies: [],
   enemies: [],
@@ -348,6 +350,7 @@ function savePreferences() {
         screenShakeEnabled: state.screenShakeEnabled,
         difficulty: state.difficulty,
         objectivePointerVisible: state.objectivePointerVisible,
+        performanceMode: state.performanceMode,
       })
     );
   } catch {}
@@ -384,6 +387,9 @@ function loadPreferences() {
     }
     if (typeof parsed.objectivePointerVisible === "boolean") {
       state.objectivePointerVisible = parsed.objectivePointerVisible;
+    }
+    if (typeof parsed.performanceMode === "boolean") {
+      state.performanceMode = parsed.performanceMode;
     }
   } catch {}
   return state.squadCommand;
@@ -730,6 +736,7 @@ function resetGame() {
   commandButtons.forEach((btn) => btn.classList.toggle("active", btn.dataset.command === state.squadCommand));
   pauseBtn.textContent = "일시정지";
   audioBtn.textContent = state.audioMuted ? "음소거 해제" : "오디오 켜짐";
+  perfBtn.textContent = state.performanceMode ? "경량 모드 켜짐" : "경량 모드 꺼짐";
   difficultyBtn.textContent = `난이도: ${difficultyPresets[state.difficulty].label}`;
   pointerBtn.textContent = state.objectivePointerVisible ? "목표 화살표 켜짐" : "목표 화살표 꺼짐";
   shakeBtn.textContent = state.screenShakeEnabled ? "흔들림 켜짐" : "흔들림 꺼짐";
@@ -777,6 +784,7 @@ function updateHud() {
   pauseBtn.textContent = state.paused ? "계속하기" : "일시정지";
 
   audioBtn.textContent = state.audioMuted ? "음소거 해제" : "오디오 켜짐";
+  perfBtn.textContent = state.performanceMode ? "경량 모드 켜짐" : "경량 모드 꺼짐";
   difficultyBtn.textContent = `난이도: ${difficultyPresets[state.difficulty].label}`;
   pointerBtn.textContent = state.objectivePointerVisible ? "목표 화살표 켜짐" : "목표 화살표 꺼짐";
   shakeBtn.textContent = state.screenShakeEnabled ? "흔들림 켜짐" : "흔들림 꺼짐";
@@ -1151,6 +1159,7 @@ function restoreDefaultPreferences() {
   state.screenShakeEnabled = true;
   state.difficulty = "normal";
   state.objectivePointerVisible = true;
+  state.performanceMode = false;
   document.body.classList.remove("hud-collapsed");
   savePreferences();
   resetGame();
@@ -1174,6 +1183,7 @@ function announceSettingChange(text, color = "#c7f0a2") {
 }
 
 function updateControlHints() {
+  setButtonHint(perfBtn, state.performanceMode ? "경량 모드 켜짐" : "경량 모드 꺼짐");
   setButtonHint(difficultyBtn, `난이도: ${difficultyPresets[state.difficulty].label}`, "N");
   setButtonHint(defaultsBtn, "기본 설정 복원");
   setButtonHint(shakeBtn, state.screenShakeEnabled ? "화면 흔들림 켜짐" : "화면 흔들림 꺼짐");
@@ -1288,6 +1298,13 @@ function toggleObjectivePointer(forceValue = null) {
     state.objectivePointerVisible ? "목표 화살표 표시" : "목표 화살표 숨김",
     "#d2f0ff"
   );
+}
+
+function togglePerformanceMode(forceValue = null) {
+  state.performanceMode = forceValue === null ? !state.performanceMode : !!forceValue;
+  savePreferences();
+  updateHud();
+  announceSettingChange(state.performanceMode ? "경량 모드 켜짐" : "경량 모드 꺼짐", "#ffd2f5");
 }
 
 function launchProjectile(kind, x, y, angle, distance, speed, color) {
@@ -1824,6 +1841,7 @@ function update(dt) {
 }
 
 function drawGrid() {
+  if (state.performanceMode) return;
   ctx.strokeStyle = "rgba(255,255,255,0.08)";
   ctx.lineWidth = 1;
   const startX = Math.floor(state.camera.x / 40) * 40;
@@ -1955,6 +1973,7 @@ function drawCoverVisual(c) {
 }
 
 function drawAtmospherics() {
+  if (state.performanceMode) return;
   if (atmosphericsCache.width !== WIDTH || atmosphericsCache.height !== HEIGHT || !atmosphericsCache.sun) {
     rebuildAtmosphericsCache();
   }
@@ -1973,7 +1992,8 @@ function drawTerrain() {
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
   ctx.fillStyle = "rgba(255,255,255,0.03)";
-  for (let i = 0; i < 80; i++) {
+  const speckleCount = state.performanceMode ? 24 : 80;
+  for (let i = 0; i < speckleCount; i++) {
     const px = ((i * 97) + state.camera.x * 0.12) % WIDTH;
     const py = ((i * 53) + state.camera.y * 0.09) % HEIGHT;
     ctx.fillRect(px, py, 2, 2);
@@ -2645,6 +2665,7 @@ function drawVisibilityMask() {
 }
 
 function drawVisionLighting() {
+  if (state.performanceMode) return;
   const viewers = [state.player, ...state.allies].filter((u) => u.hp > 0 && !u.downed);
   viewers.forEach((viewer, index) => {
     const sx = viewer.x - state.camera.x;
@@ -3138,6 +3159,7 @@ commandButtons.forEach((btn) => {
 });
 
 restartBtn.addEventListener("click", resetGame);
+perfBtn.addEventListener("click", () => togglePerformanceMode());
 pointerBtn.addEventListener("click", () => toggleObjectivePointer());
 difficultyBtn.addEventListener("click", () => cycleDifficulty());
 defaultsBtn.addEventListener("click", () => restoreDefaultPreferences());
