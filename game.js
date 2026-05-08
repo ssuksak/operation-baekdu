@@ -2278,11 +2278,12 @@ function drawBullets() {
     const sx = b.x - state.camera.x;
     const sy = b.y - state.camera.y;
     ctx.strokeStyle = b.team === "enemy" ? "rgba(255,140,140,0.95)" : "rgba(255,240,150,0.95)";
-    ctx.lineWidth = 3;
+    ctx.lineWidth = state.performanceMode ? 2 : 3;
     ctx.beginPath();
     ctx.moveTo(sx - Math.cos(angle) * 14, sy - Math.sin(angle) * 14);
     ctx.lineTo(sx, sy);
     ctx.stroke();
+    if (state.performanceMode) return;
     ctx.fillStyle = b.team === "enemy" ? "#ff9e9e" : "#fff5a5";
     ctx.beginPath();
     ctx.arc(sx, sy, 4, 0, Math.PI * 2);
@@ -2297,11 +2298,18 @@ function drawProjectiles() {
     const sx = p.x - state.camera.x;
     const sy = p.y - state.camera.y;
     ctx.strokeStyle = p.color;
-    ctx.lineWidth = 4;
+    ctx.lineWidth = state.performanceMode ? 3 : 4;
     ctx.beginPath();
     ctx.moveTo(sx - Math.cos(angle) * 24, sy - Math.sin(angle) * 24);
     ctx.lineTo(sx, sy);
     ctx.stroke();
+    if (state.performanceMode) {
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(sx, sy, p.radius, 0, Math.PI * 2);
+      ctx.fill();
+      return;
+    }
     ctx.fillStyle = "rgba(255,255,255,0.18)";
     ctx.beginPath();
     ctx.arc(sx, sy, p.radius + 6, 0, Math.PI * 2);
@@ -2317,6 +2325,11 @@ function drawProjectiles() {
 }
 
 function drawEffects() {
+  const lightweight = state.performanceMode;
+  const maxEffectsToRender = lightweight ? 18 : Number.POSITIVE_INFINITY;
+  let renderedEffects = 0;
+
+  if (!lightweight) {
   state.noiseBursts.forEach((n) => {
     if (!isOnScreen(n.x, n.y, 180)) return;
     ctx.save();
@@ -2330,11 +2343,15 @@ function drawEffects() {
     ctx.restore();
     ctx.setLineDash([]);
   });
+  }
   state.effects.forEach((e) => {
+    if (renderedEffects >= maxEffectsToRender) return;
     const sampleX = e.kind === "tracer" ? e.x1 : e.x;
     const sampleY = e.kind === "tracer" ? e.y1 : e.y;
     if (!isOnScreen(sampleX, sampleY, 120)) return;
+    if (lightweight && (e.kind === "flash" || e.kind === "shockwave" || e.kind === "burst")) return;
     if (e.kind === "muzzle") {
+      renderedEffects += 1;
       ctx.save();
       ctx.translate(e.x - state.camera.x, e.y - state.camera.y);
       ctx.rotate(e.angle);
@@ -2352,24 +2369,28 @@ function drawEffects() {
       return;
     }
     if (e.kind === "tracer") {
+      renderedEffects += 1;
       ctx.save();
       ctx.globalAlpha = Math.max(0, e.life * 6);
       ctx.strokeStyle = e.color;
-      ctx.lineWidth = 5;
+      ctx.lineWidth = lightweight ? 3 : 5;
       ctx.beginPath();
       ctx.moveTo(e.x1 - state.camera.x, e.y1 - state.camera.y);
       ctx.lineTo(e.x2 - state.camera.x, e.y2 - state.camera.y);
       ctx.stroke();
+      if (!lightweight) {
       ctx.strokeStyle = "rgba(255,255,255,0.7)";
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(e.x1 - state.camera.x, e.y1 - state.camera.y);
       ctx.lineTo(e.x2 - state.camera.x, e.y2 - state.camera.y);
       ctx.stroke();
+      }
       ctx.restore();
       return;
     }
     if (e.kind === "marker") {
+      renderedEffects += 1;
       ctx.save();
       ctx.translate(e.x - state.camera.x, e.y - state.camera.y);
       ctx.globalAlpha = Math.max(0, e.life * 1.2);
@@ -2386,13 +2407,15 @@ function drawEffects() {
       return;
     }
     if (e.kind === "impact") {
+      renderedEffects += 1;
       ctx.save();
       ctx.translate(e.x - state.camera.x, e.y - state.camera.y);
       ctx.globalAlpha = Math.max(0, e.life * 4);
       ctx.strokeStyle = e.color;
       ctx.lineWidth = 3;
-      for (let i = 0; i < 6; i++) {
-        const a = (Math.PI * 2 * i) / 6;
+      const rayCount = lightweight ? 4 : 6;
+      for (let i = 0; i < rayCount; i++) {
+        const a = (Math.PI * 2 * i) / rayCount;
         ctx.beginPath();
         ctx.moveTo(Math.cos(a) * 4, Math.sin(a) * 4);
         ctx.lineTo(Math.cos(a) * 14, Math.sin(a) * 14);
@@ -2402,19 +2425,23 @@ function drawEffects() {
       return;
     }
     if (e.kind === "damageText") {
+      renderedEffects += 1;
       ctx.save();
       ctx.globalAlpha = Math.max(0, e.life * 1.8);
       ctx.fillStyle = e.color;
-      ctx.strokeStyle = "rgba(15,18,30,0.88)";
-      ctx.lineWidth = 4;
-      ctx.font = "bold 18px Arial";
+      ctx.font = lightweight ? "bold 16px Arial" : "bold 18px Arial";
       ctx.textAlign = "center";
-      ctx.strokeText(e.text, e.x - state.camera.x, e.y - state.camera.y);
+      if (!lightweight) {
+        ctx.strokeStyle = "rgba(15,18,30,0.88)";
+        ctx.lineWidth = 4;
+        ctx.strokeText(e.text, e.x - state.camera.x, e.y - state.camera.y);
+      }
       ctx.fillText(e.text, e.x - state.camera.x, e.y - state.camera.y);
       ctx.restore();
       return;
     }
     if (e.kind === "shockwave") {
+      renderedEffects += 1;
       ctx.save();
       ctx.globalAlpha = Math.max(0, e.life * 2.2);
       ctx.strokeStyle = e.color;
@@ -2426,13 +2453,15 @@ function drawEffects() {
       return;
     }
     if (e.kind === "burst") {
+      renderedEffects += 1;
       ctx.save();
       ctx.translate(e.x - state.camera.x, e.y - state.camera.y);
       ctx.globalAlpha = Math.max(0, e.life * 4);
       ctx.strokeStyle = e.color;
       ctx.lineWidth = 3;
-      for (let i = 0; i < 10; i++) {
-        const a = (Math.PI * 2 * i) / 10;
+      const spokeCount = lightweight ? 6 : 10;
+      for (let i = 0; i < spokeCount; i++) {
+        const a = (Math.PI * 2 * i) / spokeCount;
         ctx.beginPath();
         ctx.moveTo(Math.cos(a) * 6, Math.sin(a) * 6);
         ctx.lineTo(Math.cos(a) * e.r * (1.05 - e.life), Math.sin(a) * e.r * (1.05 - e.life));
@@ -2442,6 +2471,7 @@ function drawEffects() {
       return;
     }
     if (e.kind === "flash") {
+      renderedEffects += 1;
       ctx.save();
       ctx.globalAlpha = Math.max(0, e.life * 1.7);
       ctx.fillStyle = "rgba(255,245,190,0.35)";
@@ -2457,6 +2487,7 @@ function drawEffects() {
       return;
     }
     if (e.kind === "pulse") {
+      renderedEffects += 1;
       ctx.save();
       ctx.globalAlpha = Math.max(0, e.life * 1.4);
       ctx.strokeStyle = e.color;
@@ -2467,6 +2498,7 @@ function drawEffects() {
       ctx.restore();
       return;
     }
+    renderedEffects += 1;
     ctx.globalAlpha = Math.max(0, e.life * 2);
     ctx.strokeStyle = e.color;
     ctx.lineWidth = 2;
