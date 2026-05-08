@@ -1,6 +1,12 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 let audioCtx = null;
+const atmosphericsCache = {
+  width: 0,
+  height: 0,
+  sun: null,
+  vignette: null,
+};
 
 function resizeCanvasToDisplaySize() {
   const rect = canvas.getBoundingClientRect();
@@ -11,6 +17,21 @@ function resizeCanvasToDisplaySize() {
     canvas.width = WIDTH = displayWidth;
     canvas.height = HEIGHT = displayHeight;
   }
+}
+
+function rebuildAtmosphericsCache() {
+  atmosphericsCache.width = WIDTH;
+  atmosphericsCache.height = HEIGHT;
+  const sun = ctx.createRadialGradient(130, 90, 30, 130, 90, 520);
+  sun.addColorStop(0, "rgba(255,244,186,0.12)");
+  sun.addColorStop(0.45, "rgba(255,244,186,0.06)");
+  sun.addColorStop(1, "rgba(255,244,186,0)");
+  atmosphericsCache.sun = sun;
+
+  const vignette = ctx.createRadialGradient(WIDTH / 2, HEIGHT / 2, HEIGHT * 0.25, WIDTH / 2, HEIGHT / 2, HEIGHT * 0.85);
+  vignette.addColorStop(0.65, "rgba(0,0,0,0)");
+  vignette.addColorStop(1, "rgba(0,0,0,0.18)");
+  atmosphericsCache.vignette = vignette;
 }
 
 function suppressBrowserInteraction(e) {
@@ -1809,18 +1830,16 @@ function drawGrid() {
   const endX = state.camera.x + WIDTH;
   const startY = Math.floor(state.camera.y / 40) * 40;
   const endY = state.camera.y + HEIGHT;
+  ctx.beginPath();
   for (let x = startX; x < endX; x += 40) {
-    ctx.beginPath();
     ctx.moveTo(x - state.camera.x, 0);
     ctx.lineTo(x - state.camera.x, HEIGHT);
-    ctx.stroke();
   }
   for (let y = startY; y < endY; y += 40) {
-    ctx.beginPath();
     ctx.moveTo(0, y - state.camera.y);
     ctx.lineTo(WIDTH, y - state.camera.y);
-    ctx.stroke();
   }
+  ctx.stroke();
 }
 
 function drawRoundedRect(x, y, w, h, r, fill, stroke = null) {
@@ -1936,17 +1955,13 @@ function drawCoverVisual(c) {
 }
 
 function drawAtmospherics() {
-  const sun = ctx.createRadialGradient(130, 90, 30, 130, 90, 520);
-  sun.addColorStop(0, "rgba(255,244,186,0.12)");
-  sun.addColorStop(0.45, "rgba(255,244,186,0.06)");
-  sun.addColorStop(1, "rgba(255,244,186,0)");
-  ctx.fillStyle = sun;
+  if (atmosphericsCache.width !== WIDTH || atmosphericsCache.height !== HEIGHT || !atmosphericsCache.sun) {
+    rebuildAtmosphericsCache();
+  }
+  ctx.fillStyle = atmosphericsCache.sun;
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-  const vignette = ctx.createRadialGradient(WIDTH / 2, HEIGHT / 2, HEIGHT * 0.25, WIDTH / 2, HEIGHT / 2, HEIGHT * 0.85);
-  vignette.addColorStop(0.65, "rgba(0,0,0,0)");
-  vignette.addColorStop(1, "rgba(0,0,0,0.18)");
-  ctx.fillStyle = vignette;
+  ctx.fillStyle = atmosphericsCache.vignette;
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
 }
 
