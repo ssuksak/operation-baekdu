@@ -97,6 +97,7 @@ const ammoEl = document.getElementById("ammo");
 const objectiveTextEl = document.getElementById("objectiveText");
 const classNameEl = document.getElementById("className");
 const squadListEl = document.getElementById("squadList");
+const minimapBtn = document.getElementById("minimapBtn");
 const fullscreenBtn = document.getElementById("fullscreenBtn");
 const audioBtn = document.getElementById("audioBtn");
 const restartBtn = document.getElementById("restartBtn");
@@ -227,6 +228,7 @@ const state = {
   squadCommand: "follow",
   paused: false,
   audioMuted: false,
+  minimapVisible: true,
   player: null,
   allies: [],
   enemies: [],
@@ -281,6 +283,7 @@ function savePreferences() {
         selectedMission: state.selectedMission,
         squadCommand: state.squadCommand,
         audioMuted: state.audioMuted,
+        minimapVisible: state.minimapVisible,
       })
     );
   } catch {}
@@ -302,6 +305,9 @@ function loadPreferences() {
     }
     if (typeof parsed.audioMuted === "boolean") {
       state.audioMuted = parsed.audioMuted;
+    }
+    if (typeof parsed.minimapVisible === "boolean") {
+      state.minimapVisible = parsed.minimapVisible;
     }
   } catch {}
   return state.squadCommand;
@@ -633,6 +639,7 @@ function resetGame() {
   commandButtons.forEach((btn) => btn.classList.toggle("active", btn.dataset.command === state.squadCommand));
   pauseBtn.textContent = "일시정지";
   audioBtn.textContent = state.audioMuted ? "음소거 해제" : "오디오 켜짐";
+  minimapBtn.textContent = state.minimapVisible ? "미니맵 숨기기" : "미니맵 보이기";
   updateFullscreenButton();
   skillBtn.textContent = cfg.skillName;
   if (state.selectedMission === "reconSweep") {
@@ -673,6 +680,7 @@ function updateHud() {
   pauseBtn.textContent = state.paused ? "계속하기" : "일시정지";
 
   audioBtn.textContent = state.audioMuted ? "음소거 해제" : "오디오 켜짐";
+  minimapBtn.textContent = state.minimapVisible ? "미니맵 숨기기" : "미니맵 보이기";
   updateFullscreenButton();
   squadListEl.innerHTML = "";
   const members = [state.player, ...state.allies];
@@ -990,6 +998,12 @@ function togglePause(forceValue = null) {
 
 function toggleAudioMuted(forceValue = null) {
   state.audioMuted = forceValue === null ? !state.audioMuted : !!forceValue;
+  savePreferences();
+  updateHud();
+}
+
+function toggleMinimap(forceValue = null) {
+  state.minimapVisible = forceValue === null ? !state.minimapVisible : !!forceValue;
   savePreferences();
   updateHud();
 }
@@ -2611,7 +2625,7 @@ function render() {
   [...state.allies, state.player].forEach(drawUnit);
   drawAimReticle();
   drawObjectivePointer();
-  drawMinimap();
+  if (state.minimapVisible) drawMinimap();
   drawMessage();
   drawEventBanner();
   drawHitMarkers();
@@ -2911,6 +2925,7 @@ commandButtons.forEach((btn) => {
 });
 
 restartBtn.addEventListener("click", resetGame);
+minimapBtn.addEventListener("click", () => toggleMinimap());
 fullscreenBtn.addEventListener("click", () => toggleFullscreen());
 audioBtn.addEventListener("click", () => toggleAudioMuted());
 pauseBtn.addEventListener("click", () => togglePause());
