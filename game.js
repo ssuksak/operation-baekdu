@@ -1067,18 +1067,21 @@ function togglePause(forceValue = null) {
     playUiChirp(620, 880, 0.018);
   }
   updateHud();
+  announceSettingChange(state.paused ? "일시정지" : "계속 진행", "#ffe7a8");
 }
 
 function toggleAudioMuted(forceValue = null) {
   state.audioMuted = forceValue === null ? !state.audioMuted : !!forceValue;
   savePreferences();
   updateHud();
+  announceSettingChange(state.audioMuted ? "오디오 음소거" : "오디오 켜짐", "#b6e3ff");
 }
 
 function toggleMinimap(forceValue = null) {
   state.minimapVisible = forceValue === null ? !state.minimapVisible : !!forceValue;
   savePreferences();
   updateHud();
+  announceSettingChange(state.minimapVisible ? "미니맵 표시" : "미니맵 숨김", "#d8f0a8");
 }
 
 function toggleHud(forceValue = null) {
@@ -1086,6 +1089,7 @@ function toggleHud(forceValue = null) {
   document.body.classList.toggle("hud-collapsed", !state.hudVisible);
   savePreferences();
   updateHud();
+  announceSettingChange(state.hudVisible ? "HUD 표시" : "HUD 숨김", "#f5e7a8");
 }
 
 function toggleScreenShake(forceValue = null) {
@@ -1096,6 +1100,7 @@ function toggleScreenShake(forceValue = null) {
   }
   savePreferences();
   updateHud();
+  announceSettingChange(state.screenShakeEnabled ? "화면 흔들림 켜짐" : "화면 흔들림 꺼짐", "#ffd39a");
 }
 
 function cycleDifficulty() {
@@ -1104,6 +1109,7 @@ function cycleDifficulty() {
   state.difficulty = order[(currentIndex + 1) % order.length];
   savePreferences();
   resetGame();
+  announceSettingChange(`난이도 ${difficultyPresets[state.difficulty].label}`, "#ffdf8f");
 }
 
 function restoreDefaultPreferences() {
@@ -1119,6 +1125,7 @@ function restoreDefaultPreferences() {
   savePreferences();
   resetGame();
   setSquadCommand("follow");
+  announceSettingChange("기본 설정 복원", "#d7ffd0");
 }
 
 function updateFullscreenButton() {
@@ -1130,6 +1137,10 @@ function setButtonHint(button, label, hint = "") {
   const fullLabel = hint ? `${label} (${hint})` : label;
   button.title = fullLabel;
   button.setAttribute("aria-label", fullLabel);
+}
+
+function announceSettingChange(text, color = "#c7f0a2") {
+  triggerEventBanner(text, color, 1.4);
 }
 
 function updateControlHints() {
@@ -1156,6 +1167,8 @@ async function toggleFullscreen() {
     }
   } catch {}
   updateFullscreenButton();
+  updateControlHints();
+  announceSettingChange(document.fullscreenElement ? "전체화면 시작" : "전체화면 종료", "#b8f5ff");
 }
 
 function alertNearbyEnemies(origin, radius = 180) {
