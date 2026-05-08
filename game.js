@@ -2787,8 +2787,6 @@ function render() {
   drawProjectiles();
   drawBullets();
   drawEffects();
-  drawObjectives();
-  state.enemies.forEach(drawUnit);
   [...state.allies, state.player].forEach(drawUnit);
   drawAimReticle();
   if (state.objectivePointerVisible) drawObjectivePointer();
