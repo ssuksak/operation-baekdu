@@ -36,6 +36,7 @@ function ensureAudio() {
 }
 
 function playTone(freq, duration, type = "square", volume = 0.03, sweepTo = null) {
+  if (state.audioMuted) return;
   const ac = ensureAudio();
   if (!ac) return;
   const now = ac.currentTime;
@@ -52,6 +53,7 @@ function playTone(freq, duration, type = "square", volume = 0.03, sweepTo = null
 }
 
 function playNoiseBurst(duration = 0.08, volume = 0.018) {
+  if (state.audioMuted) return;
   const ac = ensureAudio();
   if (!ac) return;
   const now = ac.currentTime;
@@ -95,6 +97,7 @@ const ammoEl = document.getElementById("ammo");
 const objectiveTextEl = document.getElementById("objectiveText");
 const classNameEl = document.getElementById("className");
 const squadListEl = document.getElementById("squadList");
+const audioBtn = document.getElementById("audioBtn");
 const restartBtn = document.getElementById("restartBtn");
 const pauseBtn = document.getElementById("pauseBtn");
 const classButtons = [...document.querySelectorAll(".class-btn")];
@@ -222,6 +225,7 @@ const state = {
   selectedMission: "intelRaid",
   squadCommand: "follow",
   paused: false,
+  audioMuted: false,
   player: null,
   allies: [],
   enemies: [],
@@ -275,6 +279,7 @@ function savePreferences() {
         selectedClass: state.selectedClass,
         selectedMission: state.selectedMission,
         squadCommand: state.squadCommand,
+        audioMuted: state.audioMuted,
       })
     );
   } catch {}
@@ -293,6 +298,9 @@ function loadPreferences() {
     }
     if (parsed.squadCommand && ["follow", "hold", "assault"].includes(parsed.squadCommand)) {
       state.squadCommand = parsed.squadCommand;
+    }
+    if (typeof parsed.audioMuted === "boolean") {
+      state.audioMuted = parsed.audioMuted;
     }
   } catch {}
   return state.squadCommand;
@@ -623,6 +631,7 @@ function resetGame() {
   missionButtons.forEach((btn) => btn.classList.toggle("active", btn.dataset.mission === state.selectedMission));
   commandButtons.forEach((btn) => btn.classList.toggle("active", btn.dataset.command === state.squadCommand));
   pauseBtn.textContent = "일시정지";
+  audioBtn.textContent = state.audioMuted ? "음소거 해제" : "오디오 켜짐";
   skillBtn.textContent = cfg.skillName;
   if (state.selectedMission === "reconSweep") {
     triggerEventBanner("정찰 소탕 · A/B 지점 확보 후 탈출", "#9fe7ff", 2.8);
@@ -661,6 +670,7 @@ function updateHud() {
   alertTextEl.textContent = state.alertLevel;
   pauseBtn.textContent = state.paused ? "계속하기" : "일시정지";
 
+  audioBtn.textContent = state.audioMuted ? "음소거 해제" : "오디오 켜짐";
   squadListEl.innerHTML = "";
   const members = [state.player, ...state.allies];
   members.forEach((m) => {
@@ -972,6 +982,12 @@ function togglePause(forceValue = null) {
     state.lastTime = performance.now();
     playUiChirp(620, 880, 0.018);
   }
+  updateHud();
+}
+
+function toggleAudioMuted(forceValue = null) {
+  state.audioMuted = forceValue === null ? !state.audioMuted : !!forceValue;
+  savePreferences();
   updateHud();
 }
 
@@ -2876,6 +2892,7 @@ commandButtons.forEach((btn) => {
 });
 
 restartBtn.addEventListener("click", resetGame);
+audioBtn.addEventListener("click", () => toggleAudioMuted());
 pauseBtn.addEventListener("click", () => togglePause());
 
 const startupCommand = loadPreferences();
