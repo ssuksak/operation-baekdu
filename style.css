@@ -49,6 +49,14 @@ button,
   margin-bottom: 12px;
 }
 
+body.hud-collapsed .hud,
+body.hud-collapsed .class-select,
+body.hud-collapsed .mission-select,
+body.hud-collapsed .command-panel,
+body.hud-collapsed .help {
+  display: none;
+}
+
 .topbar,
 .hud {
   display: flex;

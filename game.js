@@ -97,6 +97,7 @@ const ammoEl = document.getElementById("ammo");
 const objectiveTextEl = document.getElementById("objectiveText");
 const classNameEl = document.getElementById("className");
 const squadListEl = document.getElementById("squadList");
+const hudBtn = document.getElementById("hudBtn");
 const minimapBtn = document.getElementById("minimapBtn");
 const fullscreenBtn = document.getElementById("fullscreenBtn");
 const audioBtn = document.getElementById("audioBtn");
@@ -229,6 +230,7 @@ const state = {
   paused: false,
   audioMuted: false,
   minimapVisible: true,
+  hudVisible: true,
   player: null,
   allies: [],
   enemies: [],
@@ -284,6 +286,7 @@ function savePreferences() {
         squadCommand: state.squadCommand,
         audioMuted: state.audioMuted,
         minimapVisible: state.minimapVisible,
+        hudVisible: state.hudVisible,
       })
     );
   } catch {}
@@ -308,6 +311,9 @@ function loadPreferences() {
     }
     if (typeof parsed.minimapVisible === "boolean") {
       state.minimapVisible = parsed.minimapVisible;
+    }
+    if (typeof parsed.hudVisible === "boolean") {
+      state.hudVisible = parsed.hudVisible;
     }
   } catch {}
   return state.squadCommand;
@@ -639,8 +645,10 @@ function resetGame() {
   commandButtons.forEach((btn) => btn.classList.toggle("active", btn.dataset.command === state.squadCommand));
   pauseBtn.textContent = "일시정지";
   audioBtn.textContent = state.audioMuted ? "음소거 해제" : "오디오 켜짐";
+  hudBtn.textContent = state.hudVisible ? "HUD 숨기기" : "HUD 보이기";
   minimapBtn.textContent = state.minimapVisible ? "미니맵 숨기기" : "미니맵 보이기";
   updateFullscreenButton();
+  document.body.classList.toggle("hud-collapsed", !state.hudVisible);
   skillBtn.textContent = cfg.skillName;
   if (state.selectedMission === "reconSweep") {
     triggerEventBanner("정찰 소탕 · A/B 지점 확보 후 탈출", "#9fe7ff", 2.8);
@@ -680,6 +688,7 @@ function updateHud() {
   pauseBtn.textContent = state.paused ? "계속하기" : "일시정지";
 
   audioBtn.textContent = state.audioMuted ? "음소거 해제" : "오디오 켜짐";
+  hudBtn.textContent = state.hudVisible ? "HUD 숨기기" : "HUD 보이기";
   minimapBtn.textContent = state.minimapVisible ? "미니맵 숨기기" : "미니맵 보이기";
   updateFullscreenButton();
   squadListEl.innerHTML = "";
@@ -1004,6 +1013,13 @@ function toggleAudioMuted(forceValue = null) {
 
 function toggleMinimap(forceValue = null) {
   state.minimapVisible = forceValue === null ? !state.minimapVisible : !!forceValue;
+  savePreferences();
+  updateHud();
+}
+
+function toggleHud(forceValue = null) {
+  state.hudVisible = forceValue === null ? !state.hudVisible : !!forceValue;
+  document.body.classList.toggle("hud-collapsed", !state.hudVisible);
   savePreferences();
   updateHud();
 }
@@ -2655,6 +2671,11 @@ window.addEventListener("keydown", (e) => {
     toggleMinimap();
     return;
   }
+  if (e.key === "h" || e.key === "H") {
+    e.preventDefault();
+    toggleHud();
+    return;
+  }
   if (e.key === "o" || e.key === "O") {
     e.preventDefault();
     toggleAudioMuted();
@@ -2940,6 +2961,7 @@ commandButtons.forEach((btn) => {
 });
 
 restartBtn.addEventListener("click", resetGame);
+hudBtn.addEventListener("click", () => toggleHud());
 minimapBtn.addEventListener("click", () => toggleMinimap());
 fullscreenBtn.addEventListener("click", () => toggleFullscreen());
 audioBtn.addEventListener("click", () => toggleAudioMuted());
