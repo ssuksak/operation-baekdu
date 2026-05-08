@@ -97,6 +97,7 @@ const ammoEl = document.getElementById("ammo");
 const objectiveTextEl = document.getElementById("objectiveText");
 const classNameEl = document.getElementById("className");
 const squadListEl = document.getElementById("squadList");
+const pointerBtn = document.getElementById("pointerBtn");
 const difficultyBtn = document.getElementById("difficultyBtn");
 const defaultsBtn = document.getElementById("defaultsBtn");
 const shakeBtn = document.getElementById("shakeBtn");
@@ -266,6 +267,7 @@ const state = {
   hudVisible: true,
   screenShakeEnabled: true,
   difficulty: "normal",
+  objectivePointerVisible: true,
   player: null,
   allies: [],
   enemies: [],
@@ -324,6 +326,7 @@ function savePreferences() {
         hudVisible: state.hudVisible,
         screenShakeEnabled: state.screenShakeEnabled,
         difficulty: state.difficulty,
+        objectivePointerVisible: state.objectivePointerVisible,
       })
     );
   } catch {}
@@ -357,6 +360,9 @@ function loadPreferences() {
     }
     if (parsed.difficulty && difficultyPresets[parsed.difficulty]) {
       state.difficulty = parsed.difficulty;
+    }
+    if (typeof parsed.objectivePointerVisible === "boolean") {
+      state.objectivePointerVisible = parsed.objectivePointerVisible;
     }
   } catch {}
   return state.squadCommand;
@@ -704,6 +710,7 @@ function resetGame() {
   pauseBtn.textContent = "일시정지";
   audioBtn.textContent = state.audioMuted ? "음소거 해제" : "오디오 켜짐";
   difficultyBtn.textContent = `난이도: ${difficultyPresets[state.difficulty].label}`;
+  pointerBtn.textContent = state.objectivePointerVisible ? "목표 화살표 켜짐" : "목표 화살표 꺼짐";
   shakeBtn.textContent = state.screenShakeEnabled ? "흔들림 켜짐" : "흔들림 꺼짐";
   hudBtn.textContent = state.hudVisible ? "HUD 숨기기" : "HUD 보이기";
   minimapBtn.textContent = state.minimapVisible ? "미니맵 숨기기" : "미니맵 보이기";
@@ -750,6 +757,7 @@ function updateHud() {
 
   audioBtn.textContent = state.audioMuted ? "음소거 해제" : "오디오 켜짐";
   difficultyBtn.textContent = `난이도: ${difficultyPresets[state.difficulty].label}`;
+  pointerBtn.textContent = state.objectivePointerVisible ? "목표 화살표 켜짐" : "목표 화살표 꺼짐";
   shakeBtn.textContent = state.screenShakeEnabled ? "흔들림 켜짐" : "흔들림 꺼짐";
   hudBtn.textContent = state.hudVisible ? "HUD 숨기기" : "HUD 보이기";
   minimapBtn.textContent = state.minimapVisible ? "미니맵 숨기기" : "미니맵 보이기";
@@ -1121,6 +1129,7 @@ function restoreDefaultPreferences() {
   state.hudVisible = true;
   state.screenShakeEnabled = true;
   state.difficulty = "normal";
+  state.objectivePointerVisible = true;
   document.body.classList.remove("hud-collapsed");
   savePreferences();
   resetGame();
@@ -1248,6 +1257,16 @@ function triggerExplosion(x, y, radius, damage, sourceTeam) {
     }
   });
   updateHud();
+}
+
+function toggleObjectivePointer(forceValue = null) {
+  state.objectivePointerVisible = forceValue === null ? !state.objectivePointerVisible : !!forceValue;
+  savePreferences();
+  updateHud();
+  announceSettingChange(
+    state.objectivePointerVisible ? "목표 화살표 표시" : "목표 화살표 숨김",
+    "#d2f0ff"
+  );
 }
 
 function launchProjectile(kind, x, y, angle, distance, speed, color) {
@@ -2772,7 +2791,7 @@ function render() {
   state.enemies.forEach(drawUnit);
   [...state.allies, state.player].forEach(drawUnit);
   drawAimReticle();
-  drawObjectivePointer();
+  if (state.objectivePointerVisible) drawObjectivePointer();
   if (state.minimapVisible) drawMinimap();
   drawMessage();
   drawEventBanner();
@@ -2801,6 +2820,11 @@ window.addEventListener("keydown", (e) => {
   if (e.key === "m" || e.key === "M") {
     e.preventDefault();
     toggleMinimap();
+    return;
+  }
+  if (e.key === "g" || e.key === "G") {
+    e.preventDefault();
+    toggleObjectivePointer();
     return;
   }
   if (e.key === "n" || e.key === "N") {
@@ -3101,6 +3125,7 @@ commandButtons.forEach((btn) => {
 });
 
 restartBtn.addEventListener("click", resetGame);
+pointerBtn.addEventListener("click", () => toggleObjectivePointer());
 difficultyBtn.addEventListener("click", () => cycleDifficulty());
 defaultsBtn.addEventListener("click", () => restoreDefaultPreferences());
 shakeBtn.addEventListener("click", () => toggleScreenShake());
