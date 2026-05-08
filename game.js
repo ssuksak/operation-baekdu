@@ -2766,6 +2766,11 @@ window.addEventListener("keydown", (e) => {
     toggleMinimap();
     return;
   }
+  if (e.key === "n" || e.key === "N") {
+    e.preventDefault();
+    cycleDifficulty();
+    return;
+  }
   if (e.key === "h" || e.key === "H") {
     e.preventDefault();
     toggleHud();
