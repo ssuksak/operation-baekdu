@@ -97,6 +97,7 @@ const ammoEl = document.getElementById("ammo");
 const objectiveTextEl = document.getElementById("objectiveText");
 const classNameEl = document.getElementById("className");
 const squadListEl = document.getElementById("squadList");
+const shakeBtn = document.getElementById("shakeBtn");
 const hudBtn = document.getElementById("hudBtn");
 const minimapBtn = document.getElementById("minimapBtn");
 const fullscreenBtn = document.getElementById("fullscreenBtn");
@@ -231,6 +232,7 @@ const state = {
   audioMuted: false,
   minimapVisible: true,
   hudVisible: true,
+  screenShakeEnabled: true,
   player: null,
   allies: [],
   enemies: [],
@@ -287,6 +289,7 @@ function savePreferences() {
         audioMuted: state.audioMuted,
         minimapVisible: state.minimapVisible,
         hudVisible: state.hudVisible,
+        screenShakeEnabled: state.screenShakeEnabled,
       })
     );
   } catch {}
@@ -314,6 +317,9 @@ function loadPreferences() {
     }
     if (typeof parsed.hudVisible === "boolean") {
       state.hudVisible = parsed.hudVisible;
+    }
+    if (typeof parsed.screenShakeEnabled === "boolean") {
+      state.screenShakeEnabled = parsed.screenShakeEnabled;
     }
   } catch {}
   return state.squadCommand;
@@ -645,6 +651,7 @@ function resetGame() {
   commandButtons.forEach((btn) => btn.classList.toggle("active", btn.dataset.command === state.squadCommand));
   pauseBtn.textContent = "일시정지";
   audioBtn.textContent = state.audioMuted ? "음소거 해제" : "오디오 켜짐";
+  shakeBtn.textContent = state.screenShakeEnabled ? "흔들림 켜짐" : "흔들림 꺼짐";
   hudBtn.textContent = state.hudVisible ? "HUD 숨기기" : "HUD 보이기";
   minimapBtn.textContent = state.minimapVisible ? "미니맵 숨기기" : "미니맵 보이기";
   updateFullscreenButton();
@@ -688,6 +695,7 @@ function updateHud() {
   pauseBtn.textContent = state.paused ? "계속하기" : "일시정지";
 
   audioBtn.textContent = state.audioMuted ? "음소거 해제" : "오디오 켜짐";
+  shakeBtn.textContent = state.screenShakeEnabled ? "흔들림 켜짐" : "흔들림 꺼짐";
   hudBtn.textContent = state.hudVisible ? "HUD 숨기기" : "HUD 보이기";
   minimapBtn.textContent = state.minimapVisible ? "미니맵 숨기기" : "미니맵 보이기";
   updateFullscreenButton();
@@ -731,7 +739,7 @@ function screenToWorld(clientX, clientY, rect) {
 function updateCamera() {
   state.camera.x = clamp(state.player.x - WIDTH / 2, 0, WORLD_WIDTH - WIDTH);
   state.camera.y = clamp(state.player.y - HEIGHT / 2, 0, WORLD_HEIGHT - HEIGHT);
-  if (state.cameraShakeTimer > 0) {
+  if (state.screenShakeEnabled && state.cameraShakeTimer > 0) {
     state.camera.x = clamp(state.camera.x + (Math.random() - 0.5) * state.cameraShakeStrength, 0, WORLD_WIDTH - WIDTH);
     state.camera.y = clamp(state.camera.y + (Math.random() - 0.5) * state.cameraShakeStrength, 0, WORLD_HEIGHT - HEIGHT);
   }
@@ -1020,6 +1028,16 @@ function toggleMinimap(forceValue = null) {
 function toggleHud(forceValue = null) {
   state.hudVisible = forceValue === null ? !state.hudVisible : !!forceValue;
   document.body.classList.toggle("hud-collapsed", !state.hudVisible);
+  savePreferences();
+  updateHud();
+}
+
+function toggleScreenShake(forceValue = null) {
+  state.screenShakeEnabled = forceValue === null ? !state.screenShakeEnabled : !!forceValue;
+  if (!state.screenShakeEnabled) {
+    state.cameraShakeTimer = 0;
+    state.cameraShakeStrength = 0;
+  }
   savePreferences();
   updateHud();
 }
@@ -2961,6 +2979,7 @@ commandButtons.forEach((btn) => {
 });
 
 restartBtn.addEventListener("click", resetGame);
+shakeBtn.addEventListener("click", () => toggleScreenShake());
 hudBtn.addEventListener("click", () => toggleHud());
 minimapBtn.addEventListener("click", () => toggleMinimap());
 fullscreenBtn.addEventListener("click", () => toggleFullscreen());
