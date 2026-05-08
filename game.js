@@ -97,6 +97,7 @@ const ammoEl = document.getElementById("ammo");
 const objectiveTextEl = document.getElementById("objectiveText");
 const classNameEl = document.getElementById("className");
 const squadListEl = document.getElementById("squadList");
+const defaultsBtn = document.getElementById("defaultsBtn");
 const shakeBtn = document.getElementById("shakeBtn");
 const hudBtn = document.getElementById("hudBtn");
 const minimapBtn = document.getElementById("minimapBtn");
@@ -1040,6 +1041,20 @@ function toggleScreenShake(forceValue = null) {
   }
   savePreferences();
   updateHud();
+}
+
+function restoreDefaultPreferences() {
+  state.selectedClass = "rifleman";
+  state.selectedMission = "intelRaid";
+  state.squadCommand = "follow";
+  state.audioMuted = false;
+  state.minimapVisible = true;
+  state.hudVisible = true;
+  state.screenShakeEnabled = true;
+  document.body.classList.remove("hud-collapsed");
+  savePreferences();
+  resetGame();
+  setSquadCommand("follow");
 }
 
 function updateFullscreenButton() {
@@ -2979,6 +2994,7 @@ commandButtons.forEach((btn) => {
 });
 
 restartBtn.addEventListener("click", resetGame);
+defaultsBtn.addEventListener("click", () => restoreDefaultPreferences());
 shakeBtn.addEventListener("click", () => toggleScreenShake());
 hudBtn.addEventListener("click", () => toggleHud());
 minimapBtn.addEventListener("click", () => toggleMinimap());
