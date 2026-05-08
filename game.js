@@ -709,6 +709,7 @@ function resetGame() {
   minimapBtn.textContent = state.minimapVisible ? "미니맵 숨기기" : "미니맵 보이기";
   updateFullscreenButton();
   document.body.classList.toggle("hud-collapsed", !state.hudVisible);
+  updateControlHints();
   skillBtn.textContent = cfg.skillName;
   if (state.selectedMission === "reconSweep") {
     triggerEventBanner("정찰 소탕 · A/B 지점 확보 후 탈출", "#9fe7ff", 2.8);
@@ -753,6 +754,7 @@ function updateHud() {
   hudBtn.textContent = state.hudVisible ? "HUD 숨기기" : "HUD 보이기";
   minimapBtn.textContent = state.minimapVisible ? "미니맵 숨기기" : "미니맵 보이기";
   updateFullscreenButton();
+  updateControlHints();
   squadListEl.innerHTML = "";
   const members = [state.player, ...state.allies];
   members.forEach((m) => {
@@ -1121,6 +1123,28 @@ function restoreDefaultPreferences() {
 
 function updateFullscreenButton() {
   fullscreenBtn.textContent = document.fullscreenElement ? "전체화면 종료" : "전체화면";
+}
+
+function setButtonHint(button, label, hint = "") {
+  if (!button) return;
+  const fullLabel = hint ? `${label} (${hint})` : label;
+  button.title = fullLabel;
+  button.setAttribute("aria-label", fullLabel);
+}
+
+function updateControlHints() {
+  setButtonHint(difficultyBtn, `난이도: ${difficultyPresets[state.difficulty].label}`, "N");
+  setButtonHint(defaultsBtn, "기본 설정 복원");
+  setButtonHint(shakeBtn, state.screenShakeEnabled ? "화면 흔들림 켜짐" : "화면 흔들림 꺼짐");
+  setButtonHint(hudBtn, state.hudVisible ? "HUD 숨기기" : "HUD 보이기", "H");
+  setButtonHint(minimapBtn, state.minimapVisible ? "미니맵 숨기기" : "미니맵 보이기", "M");
+  setButtonHint(fullscreenBtn, document.fullscreenElement ? "전체화면 종료" : "전체화면", "F");
+  setButtonHint(audioBtn, state.audioMuted ? "오디오 음소거 해제" : "오디오 켜짐", "O");
+  setButtonHint(pauseBtn, state.paused ? "계속하기" : "일시정지", "P / Esc");
+  setButtonHint(restartBtn, "현재 작전 다시 시작");
+  setButtonHint(fireBtn, "사격");
+  setButtonHint(skillBtn, "스킬 사용");
+  setButtonHint(interactBtn, "작전 상호작용");
 }
 
 async function toggleFullscreen() {
@@ -3034,7 +3058,10 @@ document.addEventListener("visibilitychange", () => {
     releaseTransientInputs();
   }
 });
-document.addEventListener("fullscreenchange", updateFullscreenButton);
+document.addEventListener("fullscreenchange", () => {
+  updateFullscreenButton();
+  updateControlHints();
+});
 
 classButtons.forEach((btn) => {
   btn.addEventListener("click", () => {
