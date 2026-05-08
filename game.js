@@ -97,6 +97,7 @@ const ammoEl = document.getElementById("ammo");
 const objectiveTextEl = document.getElementById("objectiveText");
 const classNameEl = document.getElementById("className");
 const squadListEl = document.getElementById("squadList");
+const difficultyBtn = document.getElementById("difficultyBtn");
 const defaultsBtn = document.getElementById("defaultsBtn");
 const shakeBtn = document.getElementById("shakeBtn");
 const hudBtn = document.getElementById("hudBtn");
@@ -122,6 +123,36 @@ let WIDTH = canvas.width;
 let HEIGHT = canvas.height;
 const WORLD_WIDTH = 4200;
 const WORLD_HEIGHT = 2800;
+
+const difficultyPresets = {
+  easy: {
+    label: "쉬움",
+    playerHp: 1.18,
+    playerDamage: 1.12,
+    allyHp: 1.12,
+    allyDamage: 1.08,
+    enemyHp: 0.9,
+    enemyDamage: 0.88,
+  },
+  normal: {
+    label: "보통",
+    playerHp: 1,
+    playerDamage: 1,
+    allyHp: 1,
+    allyDamage: 1,
+    enemyHp: 1,
+    enemyDamage: 1,
+  },
+  hard: {
+    label: "어려움",
+    playerHp: 0.94,
+    playerDamage: 0.95,
+    allyHp: 0.94,
+    allyDamage: 0.95,
+    enemyHp: 1.12,
+    enemyDamage: 1.14,
+  },
+};
 
 const classConfigs = {
   rifleman: {
@@ -234,6 +265,7 @@ const state = {
   minimapVisible: true,
   hudVisible: true,
   screenShakeEnabled: true,
+  difficulty: "normal",
   player: null,
   allies: [],
   enemies: [],
@@ -291,6 +323,7 @@ function savePreferences() {
         minimapVisible: state.minimapVisible,
         hudVisible: state.hudVisible,
         screenShakeEnabled: state.screenShakeEnabled,
+        difficulty: state.difficulty,
       })
     );
   } catch {}
@@ -322,6 +355,9 @@ function loadPreferences() {
     if (typeof parsed.screenShakeEnabled === "boolean") {
       state.screenShakeEnabled = parsed.screenShakeEnabled;
     }
+    if (parsed.difficulty && difficultyPresets[parsed.difficulty]) {
+      state.difficulty = parsed.difficulty;
+    }
   } catch {}
   return state.squadCommand;
 }
@@ -332,10 +368,11 @@ function makeRect(x, y, w, h, type = "rock") {
 
 function createUnit(x, y, team, role, opts = {}) {
   const cfg = classConfigs[role] || classConfigs.rifleman;
+  const difficulty = difficultyPresets[state.difficulty] || difficultyPresets.normal;
   const preferredRange =
     opts.preferredRange ??
     (role === "heavy" ? 185 : role === "grenadier" ? 210 : role === "marksman" ? 260 : 150);
-  return {
+  const unit = {
     x,
     y,
     vx: 0,
@@ -373,6 +410,20 @@ function createUnit(x, y, team, role, opts = {}) {
     lastKnownTargetY: y,
     searchTimer: 0,
   };
+  if (team === "player") {
+    unit.maxHp = Math.round(unit.maxHp * difficulty.playerHp);
+    unit.hp = Math.round(unit.hp * difficulty.playerHp);
+    unit.damage = Math.round(unit.damage * difficulty.playerDamage);
+  } else if (team === "ally") {
+    unit.maxHp = Math.round(unit.maxHp * difficulty.allyHp);
+    unit.hp = Math.round(unit.hp * difficulty.allyHp);
+    unit.damage = Math.round(unit.damage * difficulty.allyDamage);
+  } else if (team === "enemy") {
+    unit.maxHp = Math.round(unit.maxHp * difficulty.enemyHp);
+    unit.hp = Math.round(unit.hp * difficulty.enemyHp);
+    unit.damage = Math.round(unit.damage * difficulty.enemyDamage);
+  }
+  return unit;
 }
 
 function getMissionConfig() {
@@ -652,6 +703,7 @@ function resetGame() {
   commandButtons.forEach((btn) => btn.classList.toggle("active", btn.dataset.command === state.squadCommand));
   pauseBtn.textContent = "일시정지";
   audioBtn.textContent = state.audioMuted ? "음소거 해제" : "오디오 켜짐";
+  difficultyBtn.textContent = `난이도: ${difficultyPresets[state.difficulty].label}`;
   shakeBtn.textContent = state.screenShakeEnabled ? "흔들림 켜짐" : "흔들림 꺼짐";
   hudBtn.textContent = state.hudVisible ? "HUD 숨기기" : "HUD 보이기";
   minimapBtn.textContent = state.minimapVisible ? "미니맵 숨기기" : "미니맵 보이기";
@@ -696,6 +748,7 @@ function updateHud() {
   pauseBtn.textContent = state.paused ? "계속하기" : "일시정지";
 
   audioBtn.textContent = state.audioMuted ? "음소거 해제" : "오디오 켜짐";
+  difficultyBtn.textContent = `난이도: ${difficultyPresets[state.difficulty].label}`;
   shakeBtn.textContent = state.screenShakeEnabled ? "흔들림 켜짐" : "흔들림 꺼짐";
   hudBtn.textContent = state.hudVisible ? "HUD 숨기기" : "HUD 보이기";
   minimapBtn.textContent = state.minimapVisible ? "미니맵 숨기기" : "미니맵 보이기";
@@ -1043,6 +1096,14 @@ function toggleScreenShake(forceValue = null) {
   updateHud();
 }
 
+function cycleDifficulty() {
+  const order = ["easy", "normal", "hard"];
+  const currentIndex = order.indexOf(state.difficulty);
+  state.difficulty = order[(currentIndex + 1) % order.length];
+  savePreferences();
+  resetGame();
+}
+
 function restoreDefaultPreferences() {
   state.selectedClass = "rifleman";
   state.selectedMission = "intelRaid";
@@ -1051,6 +1112,7 @@ function restoreDefaultPreferences() {
   state.minimapVisible = true;
   state.hudVisible = true;
   state.screenShakeEnabled = true;
+  state.difficulty = "normal";
   document.body.classList.remove("hud-collapsed");
   savePreferences();
   resetGame();
@@ -2994,6 +3056,7 @@ commandButtons.forEach((btn) => {
 });
 
 restartBtn.addEventListener("click", resetGame);
+difficultyBtn.addEventListener("click", () => cycleDifficulty());
 defaultsBtn.addEventListener("click", () => restoreDefaultPreferences());
 shakeBtn.addEventListener("click", () => toggleScreenShake());
 hudBtn.addEventListener("click", () => toggleHud());
