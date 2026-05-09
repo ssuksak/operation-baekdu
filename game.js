@@ -384,6 +384,7 @@ const state = {
   difficulty: "normal",
   objectivePointerVisible: true,
   performanceMode: false,
+  perfStatsVisible: false,
   player: null,
   allies: [],
   enemies: [],
@@ -424,6 +425,10 @@ const state = {
   recoilKick: 0,
   cameraShakeTimer: 0,
   cameraShakeStrength: 0,
+  fps: 0,
+  frameMs: 0,
+  updateMs: 0,
+  renderMs: 0,
   lastTime: 0,
 };
 
@@ -444,6 +449,7 @@ function savePreferences() {
         difficulty: state.difficulty,
         objectivePointerVisible: state.objectivePointerVisible,
         performanceMode: state.performanceMode,
+        perfStatsVisible: state.perfStatsVisible,
       })
     );
   } catch {}
@@ -483,6 +489,9 @@ function loadPreferences() {
     }
     if (typeof parsed.performanceMode === "boolean") {
       state.performanceMode = parsed.performanceMode;
+    }
+    if (typeof parsed.perfStatsVisible === "boolean") {
+      state.perfStatsVisible = parsed.perfStatsVisible;
     }
   } catch {}
   return state.squadCommand;
@@ -1399,6 +1408,12 @@ function togglePerformanceMode(forceValue = null) {
   savePreferences();
   updateHud();
   announceSettingChange(state.performanceMode ? "경량 모드 켜짐" : "경량 모드 꺼짐", "#ffd2f5");
+}
+
+function togglePerfStats(forceValue = null) {
+  state.perfStatsVisible = forceValue === null ? !state.perfStatsVisible : !!forceValue;
+  savePreferences();
+  announceSettingChange(state.perfStatsVisible ? "성능 통계 표시" : "성능 통계 숨김", "#b8f5ff");
 }
 
 function launchProjectile(kind, x, y, angle, distance, speed, color) {
@@ -2700,6 +2715,26 @@ function drawPlayerDamageVignette() {
   ctx.restore();
 }
 
+function drawPerfStats() {
+  if (!state.perfStatsVisible) return;
+  const x = 18;
+  const y = HEIGHT - 86;
+  ctx.save();
+  ctx.fillStyle = "rgba(7, 12, 18, 0.78)";
+  ctx.fillRect(x, y, 162, 68);
+  ctx.strokeStyle = "rgba(150, 220, 255, 0.45)";
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(x, y, 162, 68);
+  ctx.fillStyle = "#d7f4ff";
+  ctx.font = "12px monospace";
+  ctx.textAlign = "left";
+  ctx.fillText(`FPS ${state.fps.toFixed(1)}`, x + 10, y + 18);
+  ctx.fillText(`Frame ${state.frameMs.toFixed(1)} ms`, x + 10, y + 34);
+  ctx.fillText(`Update ${state.updateMs.toFixed(1)} ms`, x + 10, y + 50);
+  ctx.fillText(`Render ${state.renderMs.toFixed(1)} ms`, x + 10, y + 64);
+  ctx.restore();
+}
+
 function drawMinimap() {
   const mapW = 170;
   const mapH = 115;
@@ -2985,15 +3020,26 @@ function render() {
   drawKillBanner();
   drawScreenFlash();
   drawPlayerDamageVignette();
+  drawPerfStats();
   drawOverlay();
 }
 
 function loop(timestamp) {
   resizeCanvasToDisplaySize();
-  const dt = Math.min(0.033, (timestamp - state.lastTime) / 1000 || 0.016);
+  const rawFrameMs = Math.max(0.0001, timestamp - state.lastTime || 16);
+  const dt = Math.min(0.033, rawFrameMs / 1000 || 0.016);
   state.lastTime = timestamp;
+  const updateStart = performance.now();
   if (!state.paused) update(dt);
+  const updateElapsed = performance.now() - updateStart;
+  const renderStart = performance.now();
   render();
+  const renderElapsed = performance.now() - renderStart;
+  state.frameMs = state.frameMs ? state.frameMs * 0.88 + rawFrameMs * 0.12 : rawFrameMs;
+  state.updateMs = state.updateMs ? state.updateMs * 0.88 + updateElapsed * 0.12 : updateElapsed;
+  state.renderMs = state.renderMs ? state.renderMs * 0.88 + renderElapsed * 0.12 : renderElapsed;
+  const instantFps = 1000 / rawFrameMs;
+  state.fps = state.fps ? state.fps * 0.88 + instantFps * 0.12 : instantFps;
   requestAnimationFrame(loop);
 }
 
@@ -3031,6 +3077,11 @@ window.addEventListener("keydown", (e) => {
   if (e.key === "f" || e.key === "F") {
     e.preventDefault();
     toggleFullscreen();
+    return;
+  }
+  if (e.key === "j" || e.key === "J") {
+    e.preventDefault();
+    togglePerfStats();
     return;
   }
   if (state.paused) return;
