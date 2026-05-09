@@ -229,6 +229,7 @@ const commandTextEl = document.getElementById("commandText");
 const alertTextEl = document.getElementById("alertText");
 const phaseTextEl = document.getElementById("phaseText");
 const phaseDetailTextEl = document.getElementById("phaseDetailText");
+const bonusTextEl = document.getElementById("bonusText");
 const interactHintEl = document.getElementById("interactHint");
 const fireBtn = document.getElementById("fireBtn");
 const skillBtn = document.getElementById("skillBtn");
@@ -412,6 +413,9 @@ const state = {
   victory: false,
   failureReason: "",
   victoryReason: "",
+  highAlertTriggered: false,
+  anyAllyDowned: false,
+  suppliesUsedCount: 0,
   waveTimer: 0,
   missionClock: 0,
   wavesRemaining: 0,
@@ -819,6 +823,9 @@ function resetGame() {
   state.victory = false;
   state.failureReason = "";
   state.victoryReason = "";
+  state.highAlertTriggered = false;
+  state.anyAllyDowned = false;
+  state.suppliesUsedCount = 0;
   state.paused = false;
   state.hitMarkerTimer = 0;
   state.killMarkerTimer = 0;
@@ -903,6 +910,7 @@ function updateHud() {
       : `탈출 지점으로 복귀 / ${objectiveDistance}m`;
   if (phaseTextEl) phaseTextEl.textContent = getPhaseGuideText();
   if (phaseDetailTextEl) phaseDetailTextEl.textContent = getPhaseDetailText();
+  if (bonusTextEl) bonusTextEl.textContent = getBonusObjectiveText();
   if (interactHintEl) interactHintEl.textContent = getInteractHint();
   commandTextEl.textContent =
     state.squadCommand === "follow" ? "집결" : state.squadCommand === "hold" ? "고정" : "돌격";
@@ -1039,6 +1047,31 @@ function getPhaseDetailText() {
   if (state.objectivePhase === "disableJammer") return "교란기를 먼저 파괴해야 자료 확보와 탈출 경로가 안전해집니다.";
   if (state.objectivePhase === "retrieve") return "교전보다 정보 자료 확보가 우선입니다. 엄폐와 분대 명령을 활용하십시오.";
   return "잔존 적과 시야를 확인하며 탈출 지점까지 안전하게 복귀하십시오.";
+}
+
+function getBonusObjectives() {
+  if (state.selectedMission === "outpostDefense") {
+    return [
+      { label: "분대 생존", complete: !state.anyAllyDowned },
+      { label: "보급 절약", complete: state.suppliesUsedCount === 0 },
+    ];
+  }
+  if (state.selectedMission === "reconSweep") {
+    return [
+      { label: "양 지점 확보", complete: !!state.reconA?.complete && !!state.reconB?.complete },
+      { label: "조용한 정찰", complete: !state.highAlertTriggered },
+    ];
+  }
+  return [
+    { label: "분대 생존", complete: !state.anyAllyDowned },
+    { label: "경계도 억제", complete: !state.highAlertTriggered },
+  ];
+}
+
+function getBonusObjectiveText() {
+  return getBonusObjectives()
+    .map((bonus) => `${bonus.complete ? "✓" : "·"} ${bonus.label}`)
+    .join(" / ");
 }
 
 function getInteractHint() {
@@ -1822,6 +1855,7 @@ function updateBullets(dt) {
           t.downed = true;
           t.hp = t.maxHp * 0.25;
           t.bleedout = 12;
+          state.anyAllyDowned = true;
           setMessage(`${classConfigs[t.role].label} 다운! 접근하여 회복하라`);
         }
         if (t.team === "enemy" && t.hp <= 0 && b.team === "player") {
@@ -1919,6 +1953,7 @@ function handleInteract() {
   const supply = state.supplies.find((item) => !item.used && Math.hypot(p.x - item.x, p.y - item.y) < 40);
   if (supply) {
     supply.used = true;
+    state.suppliesUsedCount += 1;
     if (supply.type === "ammo") {
       p.reserve += 30;
       setMessage("탄약 보급 완료");
@@ -2049,6 +2084,7 @@ function update(dt) {
 
   const alertCount = state.enemies.filter((enemy) => enemy.hp > 0 && enemy.alert === "alert").length;
   state.alertLevel = alertCount >= 4 ? "높음" : alertCount >= 2 ? "중간" : "낮음";
+  if (state.alertLevel === "높음") state.highAlertTriggered = true;
   checkGameState();
   updateCamera();
 
@@ -3116,23 +3152,24 @@ function getElapsedSeconds() {
 
 function getMissionResultSummary() {
   if (!state.stats) return [];
+  const bonusCount = getBonusObjectives().filter((bonus) => bonus.complete).length;
   if (state.selectedMission === "outpostDefense") {
     const repelled = Math.max(0, (state.stats.initialWaves || 0) - state.wavesRemaining);
     return [
       `방어 웨이브 저지 ${repelled} / ${state.stats.initialWaves || 0}`,
-      `남은 방어 시간 ${Math.max(0, Math.ceil(state.missionClock))}초`,
+      `남은 방어 시간 ${Math.max(0, Math.ceil(state.missionClock))}초 · 보너스 ${bonusCount}/2`,
     ];
   }
   if (state.selectedMission === "reconSweep") {
     const a = state.reconA?.complete ? "A 확보" : "A 미확보";
     const b = state.reconB?.complete ? "B 확보" : "B 미확보";
     const ex = state.victory ? "탈출 성공" : state.objectivePhase === "extract" ? "탈출 단계 진입" : "탈출 전";
-    return [`정찰 지점 상태 · ${a} / ${b}`, `복귀 상태 · ${ex}`];
+    return [`정찰 지점 상태 · ${a} / ${b}`, `복귀 상태 · ${ex} · 보너스 ${bonusCount}/2`];
   }
   const jammer = state.jammer?.disabled ? "교란기 파괴" : "교란기 미파괴";
   const intel = state.intel?.collected ? "자료 확보" : "자료 미확보";
   const extract = state.victory ? "탈출 성공" : state.objectivePhase === "extract" ? "탈출 단계 진입" : "탈출 전";
-  return [`핵심 목표 · ${jammer} / ${intel}`, `작전 종료 상태 · ${extract}`];
+  return [`핵심 목표 · ${jammer} / ${intel}`, `작전 종료 상태 · ${extract} · 보너스 ${bonusCount}/2`];
 }
 
 function drawOverlay() {
