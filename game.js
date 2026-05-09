@@ -385,6 +385,8 @@ const state = {
   objectivePointerVisible: true,
   performanceMode: false,
   perfStatsVisible: false,
+  tutorialCompleted: false,
+  tutorialStep: 0,
   player: null,
   allies: [],
   enemies: [],
@@ -452,6 +454,7 @@ function savePreferences() {
         objectivePointerVisible: state.objectivePointerVisible,
         performanceMode: state.performanceMode,
         perfStatsVisible: state.perfStatsVisible,
+        tutorialCompleted: state.tutorialCompleted,
       })
     );
   } catch {}
@@ -494,6 +497,9 @@ function loadPreferences() {
     }
     if (typeof parsed.perfStatsVisible === "boolean") {
       state.perfStatsVisible = parsed.perfStatsVisible;
+    }
+    if (typeof parsed.tutorialCompleted === "boolean") {
+      state.tutorialCompleted = parsed.tutorialCompleted;
     }
   } catch {}
   return state.squadCommand;
@@ -833,6 +839,7 @@ function resetGame() {
     startedAt: performance.now(),
     finishedAt: null,
   };
+  state.tutorialStep = state.tutorialCompleted ? 99 : 0;
   input.fire = false;
   input.interact = false;
   input.touchAiming = false;
@@ -1029,6 +1036,48 @@ function getInteractHint() {
     if (state.objectivePhase === "extract" && state.extraction && Math.hypot(p.x - state.extraction.x, p.y - state.extraction.y) < 48) return "탈출 완료 가능 · 작전 버튼 / E";
   }
   return "근처 목표나 보급품에 접근하면 상호작용 가능";
+}
+
+function getTutorialStepText() {
+  if (state.tutorialCompleted || state.tutorialStep >= 99) return "";
+  if (state.tutorialStep === 0) return "이동해보세요 · WASD 또는 좌측 스틱";
+  if (state.tutorialStep === 1) return "조준해보세요 · 마우스 또는 우측 화면 드래그";
+  if (state.tutorialStep === 2) return "사격해보세요 · 좌클릭 또는 사격 버튼";
+  return "목표에 접근해 상호작용하세요 · E 또는 작전 버튼";
+}
+
+function updateTutorialProgress() {
+  if (state.tutorialCompleted || state.tutorialStep >= 99 || !state.player) return;
+  if (state.tutorialStep === 0) {
+    const moved = Math.hypot(state.player.x - state.player.holdX, state.player.y - state.player.holdY);
+    if (moved > 36 || input.up || input.down || input.left || input.right || Math.hypot(input.touchMoveX, input.touchMoveY) > 0.2) {
+      state.tutorialStep = 1;
+      announceSettingChange("튜토리얼 · 이동 완료", "#bde9ff");
+    }
+    return;
+  }
+  if (state.tutorialStep === 1) {
+    const aimMoved = Math.hypot(input.mouseX - state.player.x, input.mouseY - state.player.y);
+    if (aimMoved > 42 || input.touchAiming) {
+      state.tutorialStep = 2;
+      announceSettingChange("튜토리얼 · 조준 완료", "#bde9ff");
+    }
+    return;
+  }
+  if (state.tutorialStep === 2) {
+    if (state.stats?.shots > 0) {
+      state.tutorialStep = 3;
+      announceSettingChange("튜토리얼 · 사격 완료", "#bde9ff");
+    }
+    return;
+  }
+  const objective = getCurrentObjectiveTarget();
+  if (objective && Math.hypot(state.player.x - objective.x, state.player.y - objective.y) < 90) {
+    state.tutorialCompleted = true;
+    state.tutorialStep = 99;
+    savePreferences();
+    announceSettingChange("튜토리얼 완료", "#c7f0a2");
+  }
 }
 
 function hasLineOfSight(a, b) {
@@ -1986,6 +2035,7 @@ function update(dt) {
   if (state.eventBannerTimer > 0) state.eventBannerTimer = Math.max(0, state.eventBannerTimer - dt);
   if (state.recoilKick > 0) state.recoilKick = Math.max(0, state.recoilKick - dt * 3.4);
   if (state.cameraShakeTimer > 0) state.cameraShakeTimer = Math.max(0, state.cameraShakeTimer - dt);
+  updateTutorialProgress();
   updateHud();
 }
 
@@ -2792,6 +2842,32 @@ function drawNearMissCue() {
   ctx.restore();
 }
 
+function drawTutorialCard() {
+  const text = getTutorialStepText();
+  if (!text) return;
+  const w = 320;
+  const h = 72;
+  const x = WIDTH - w - 18;
+  const y = HEIGHT - h - 18;
+  ctx.save();
+  ctx.fillStyle = "rgba(7, 12, 18, 0.82)";
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = "rgba(190, 235, 255, 0.45)";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x, y, w, h);
+  ctx.fillStyle = "#d7f4ff";
+  ctx.font = "bold 15px sans-serif";
+  ctx.textAlign = "left";
+  ctx.fillText("초기 전술 안내", x + 14, y + 24);
+  ctx.fillStyle = "#edf8f1";
+  ctx.font = "14px sans-serif";
+  ctx.fillText(text, x + 14, y + 48);
+  ctx.fillStyle = "rgba(255,255,255,0.7)";
+  ctx.font = "12px sans-serif";
+  ctx.fillText(`단계 ${Math.min(4, state.tutorialStep + 1)} / 4`, x + 14, y + 64);
+  ctx.restore();
+}
+
 function drawPerfStats() {
   if (!state.perfStatsVisible) return;
   const x = 18;
@@ -3098,6 +3174,7 @@ function render() {
   drawScreenFlash();
   drawPlayerDamageVignette();
   drawNearMissCue();
+  drawTutorialCard();
   drawPerfStats();
   drawOverlay();
 }
