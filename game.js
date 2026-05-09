@@ -841,6 +841,8 @@ function resetGame() {
     hits: 0,
     kills: 0,
     revives: 0,
+    initialWaves: mission.wavesRemaining || 0,
+    initialMissionClock: mission.missionClock || 0,
     startedAt: performance.now(),
     finishedAt: null,
   };
@@ -3112,6 +3114,27 @@ function getElapsedSeconds() {
   return Math.max(1, Math.floor((end - state.stats.startedAt) / 1000));
 }
 
+function getMissionResultSummary() {
+  if (!state.stats) return [];
+  if (state.selectedMission === "outpostDefense") {
+    const repelled = Math.max(0, (state.stats.initialWaves || 0) - state.wavesRemaining);
+    return [
+      `방어 웨이브 저지 ${repelled} / ${state.stats.initialWaves || 0}`,
+      `남은 방어 시간 ${Math.max(0, Math.ceil(state.missionClock))}초`,
+    ];
+  }
+  if (state.selectedMission === "reconSweep") {
+    const a = state.reconA?.complete ? "A 확보" : "A 미확보";
+    const b = state.reconB?.complete ? "B 확보" : "B 미확보";
+    const ex = state.victory ? "탈출 성공" : state.objectivePhase === "extract" ? "탈출 단계 진입" : "탈출 전";
+    return [`정찰 지점 상태 · ${a} / ${b}`, `복귀 상태 · ${ex}`];
+  }
+  const jammer = state.jammer?.disabled ? "교란기 파괴" : "교란기 미파괴";
+  const intel = state.intel?.collected ? "자료 확보" : "자료 미확보";
+  const extract = state.victory ? "탈출 성공" : state.objectivePhase === "extract" ? "탈출 단계 진입" : "탈출 전";
+  return [`핵심 목표 · ${jammer} / ${intel}`, `작전 종료 상태 · ${extract}`];
+}
+
 function drawOverlay() {
   if (!state.gameOver && !state.victory && !state.paused) return;
   ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
@@ -3137,7 +3160,10 @@ function drawOverlay() {
     WIDTH / 2,
     HEIGHT / 2 + 56
   );
-  ctx.fillText("상단 재시작 버튼으로 다시 시작할 수 있습니다.", WIDTH / 2, HEIGHT / 2 + 88);
+  const missionSummary = getMissionResultSummary();
+  if (missionSummary[0]) ctx.fillText(missionSummary[0], WIDTH / 2, HEIGHT / 2 + 84);
+  if (missionSummary[1]) ctx.fillText(missionSummary[1], WIDTH / 2, HEIGHT / 2 + 112);
+  ctx.fillText("상단 재시작 버튼으로 다시 시작할 수 있습니다.", WIDTH / 2, HEIGHT / 2 + 144);
   ctx.textAlign = "left";
 }
 
