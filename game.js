@@ -422,6 +422,7 @@ const state = {
   eventBannerTimer: 0,
   eventBannerText: "",
   eventBannerColor: "#ffe082",
+  hitStopTimer: 0,
   recoilKick: 0,
   cameraShakeTimer: 0,
   cameraShakeStrength: 0,
@@ -817,6 +818,7 @@ function resetGame() {
   state.eventBannerTimer = 0;
   state.eventBannerText = "";
   state.eventBannerColor = "#ffe082";
+  state.hitStopTimer = 0;
   state.recoilKick = 0;
   state.cameraShakeTimer = 0;
   state.cameraShakeStrength = 0;
@@ -1716,6 +1718,7 @@ function updateBullets(dt) {
         if (b.team === "player") {
           state.stats.hits += 1;
           state.hitMarkerTimer = 0.12;
+          state.hitStopTimer = Math.max(state.hitStopTimer, 0.024);
         }
         if (b.team === "enemy" && t === state.player) {
           state.playerDamageTimer = 0.28;
@@ -1731,11 +1734,13 @@ function updateBullets(dt) {
           state.stats.kills += 1;
           t.deathTimer = 0.7;
           t.deathTilt = (Math.random() < 0.5 ? -1 : 1) * (0.8 + Math.random() * 0.35);
+          state.hitStopTimer = Math.max(state.hitStopTimer, 0.05);
           state.killMarkerTimer = 0.24;
           state.killBannerTimer = 0.75;
           state.killBannerText = `${classConfigs[t.role]?.label || "적"} 처치`;
           state.cameraShakeTimer = 0.12;
           state.cameraShakeStrength = Math.max(state.cameraShakeStrength, 14);
+          state.effects.push({ kind: "shockwave", x: t.x, y: t.y, r: 56, life: 0.22, color: "#ff9a9a" });
         }
         state.effects.push({
           kind: "damageText",
@@ -3065,8 +3070,12 @@ function loop(timestamp) {
   const rawFrameMs = Math.max(0.0001, timestamp - state.lastTime || 16);
   const dt = Math.min(0.033, rawFrameMs / 1000 || 0.016);
   state.lastTime = timestamp;
+  if (state.hitStopTimer > 0) {
+    state.hitStopTimer = Math.max(0, state.hitStopTimer - rawFrameMs / 1000);
+  }
+  const effectiveDt = state.hitStopTimer > 0 ? 0 : dt;
   const updateStart = performance.now();
-  if (!state.paused) update(dt);
+  if (!state.paused) update(effectiveDt);
   const updateElapsed = performance.now() - updateStart;
   const renderStart = performance.now();
   render();
