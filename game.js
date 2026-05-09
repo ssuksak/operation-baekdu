@@ -16,6 +16,21 @@ const visibilityMaskCache = {
   scale: 0.5,
 };
 
+const minimapCache = {
+  canvas: document.createElement("canvas"),
+  ctx: null,
+  width: 0,
+  height: 0,
+  dirty: true,
+};
+
+const damageVignetteCache = {
+  canvas: document.createElement("canvas"),
+  ctx: null,
+  width: 0,
+  height: 0,
+};
+
 function resizeCanvasToDisplaySize() {
   const rect = canvas.getBoundingClientRect();
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -40,6 +55,76 @@ function rebuildAtmosphericsCache() {
   vignette.addColorStop(0.65, "rgba(0,0,0,0)");
   vignette.addColorStop(1, "rgba(0,0,0,0.18)");
   atmosphericsCache.vignette = vignette;
+}
+
+function rebuildMinimapCache(mapW, mapH) {
+  if (!minimapCache.ctx) {
+    minimapCache.ctx = minimapCache.canvas.getContext("2d");
+  }
+  if (minimapCache.width !== mapW || minimapCache.height !== mapH) {
+    minimapCache.width = mapW;
+    minimapCache.height = mapH;
+    minimapCache.canvas.width = mapW;
+    minimapCache.canvas.height = mapH;
+    minimapCache.ctx = minimapCache.canvas.getContext("2d");
+  }
+
+  const mctx = minimapCache.ctx;
+  mctx.clearRect(0, 0, mapW, mapH);
+  mctx.fillStyle = "rgba(10,18,20,0.78)";
+  mctx.fillRect(0, 0, mapW, mapH);
+
+  mctx.strokeStyle = "rgba(255,255,255,0.08)";
+  for (let i = 1; i < 4; i++) {
+    const gx = (mapW / 4) * i;
+    mctx.beginPath();
+    mctx.moveTo(gx, 10);
+    mctx.lineTo(gx, mapH - 10);
+    mctx.stroke();
+  }
+  for (let i = 1; i < 3; i++) {
+    const gy = (mapH / 3) * i;
+    mctx.beginPath();
+    mctx.moveTo(10, gy);
+    mctx.lineTo(mapW - 10, gy);
+    mctx.stroke();
+  }
+
+  state.terrain.forEach((zone) => {
+    const zx = (zone.x / WORLD_WIDTH) * mapW;
+    const zy = (zone.y / WORLD_HEIGHT) * mapH;
+    const zw = (zone.w / WORLD_WIDTH) * mapW;
+    const zh = (zone.h / WORLD_HEIGHT) * mapH;
+    mctx.fillStyle =
+      zone.type === "road" ? "rgba(160,150,125,0.55)" :
+      zone.type === "water" ? "rgba(90,170,220,0.55)" :
+      zone.type === "hill" ? "rgba(120,170,115,0.32)" :
+      "rgba(70,150,80,0.42)";
+    mctx.fillRect(zx, zy, zw, zh);
+  });
+
+  minimapCache.dirty = false;
+}
+
+function rebuildDamageVignetteCache() {
+  if (!damageVignetteCache.ctx) {
+    damageVignetteCache.ctx = damageVignetteCache.canvas.getContext("2d");
+  }
+  if (damageVignetteCache.width !== WIDTH || damageVignetteCache.height !== HEIGHT) {
+    damageVignetteCache.width = WIDTH;
+    damageVignetteCache.height = HEIGHT;
+    damageVignetteCache.canvas.width = WIDTH;
+    damageVignetteCache.canvas.height = HEIGHT;
+    damageVignetteCache.ctx = damageVignetteCache.canvas.getContext("2d");
+  }
+
+  const dctx = damageVignetteCache.ctx;
+  dctx.clearRect(0, 0, WIDTH, HEIGHT);
+  const edge = dctx.createRadialGradient(WIDTH / 2, HEIGHT / 2, HEIGHT * 0.2, WIDTH / 2, HEIGHT / 2, HEIGHT * 0.82);
+  edge.addColorStop(0.55, "rgba(0,0,0,0)");
+  edge.addColorStop(1, "rgba(255,70,70,1)");
+  dctx.fillStyle = edge;
+  dctx.fillRect(0, 0, WIDTH, HEIGHT);
 }
 
 function suppressBrowserInteraction(e) {
@@ -687,6 +772,7 @@ function resetGame() {
   state.enemies = mission.enemies;
   state.cover = mission.cover;
   state.terrain = mission.terrain || [];
+  minimapCache.dirty = true;
   state.supplies = mission.supplies || [];
   state.intel = mission.intel;
   state.reconA = mission.reconA || null;
@@ -2605,12 +2691,12 @@ function drawScreenFlash() {
 
 function drawPlayerDamageVignette() {
   if (state.playerDamageTimer <= 0) return;
-  const edge = ctx.createRadialGradient(WIDTH / 2, HEIGHT / 2, HEIGHT * 0.2, WIDTH / 2, HEIGHT / 2, HEIGHT * 0.82);
-  edge.addColorStop(0.55, "rgba(0,0,0,0)");
-  edge.addColorStop(1, `rgba(255,70,70,${Math.min(0.45, state.playerDamageTimer * 1.4)})`);
+  if (damageVignetteCache.width !== WIDTH || damageVignetteCache.height !== HEIGHT) {
+    rebuildDamageVignetteCache();
+  }
   ctx.save();
-  ctx.fillStyle = edge;
-  ctx.fillRect(0, 0, WIDTH, HEIGHT);
+  ctx.globalAlpha = Math.min(0.45, state.playerDamageTimer * 1.4);
+  ctx.drawImage(damageVignetteCache.canvas, 0, 0, WIDTH, HEIGHT);
   ctx.restore();
 }
 
@@ -2620,35 +2706,10 @@ function drawMinimap() {
   const x = WIDTH - mapW - 18;
   const y = 18;
   drawRoundedRect(x, y, mapW, mapH, 10, "rgba(10,18,20,0.78)", "rgba(190,220,200,0.28)");
-
-  ctx.strokeStyle = "rgba(255,255,255,0.08)";
-  for (let i = 1; i < 4; i++) {
-    const gx = x + (mapW / 4) * i;
-    ctx.beginPath();
-    ctx.moveTo(gx, y + 10);
-    ctx.lineTo(gx, y + mapH - 10);
-    ctx.stroke();
+  if (minimapCache.dirty || minimapCache.width !== mapW || minimapCache.height !== mapH) {
+    rebuildMinimapCache(mapW, mapH);
   }
-  for (let i = 1; i < 3; i++) {
-    const gy = y + (mapH / 3) * i;
-    ctx.beginPath();
-    ctx.moveTo(x + 10, gy);
-    ctx.lineTo(x + mapW - 10, gy);
-    ctx.stroke();
-  }
-
-  state.terrain.forEach((zone) => {
-    const zx = x + (zone.x / WORLD_WIDTH) * mapW;
-    const zy = y + (zone.y / WORLD_HEIGHT) * mapH;
-    const zw = (zone.w / WORLD_WIDTH) * mapW;
-    const zh = (zone.h / WORLD_HEIGHT) * mapH;
-    ctx.fillStyle =
-      zone.type === "road" ? "rgba(160,150,125,0.55)" :
-      zone.type === "water" ? "rgba(90,170,220,0.55)" :
-      zone.type === "hill" ? "rgba(120,170,115,0.32)" :
-      "rgba(70,150,80,0.42)";
-    ctx.fillRect(zx, zy, zw, zh);
-  });
+  ctx.drawImage(minimapCache.canvas, x, y, mapW, mapH);
 
   const target = getCurrentObjectiveTarget();
   if (target) {
