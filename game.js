@@ -228,6 +228,7 @@ const commandButtons = [...document.querySelectorAll(".command-btn")];
 const commandTextEl = document.getElementById("commandText");
 const alertTextEl = document.getElementById("alertText");
 const phaseTextEl = document.getElementById("phaseText");
+const phaseDetailTextEl = document.getElementById("phaseDetailText");
 const interactHintEl = document.getElementById("interactHint");
 const fireBtn = document.getElementById("fireBtn");
 const skillBtn = document.getElementById("skillBtn");
@@ -409,6 +410,8 @@ const state = {
   messageTimer: 0,
   gameOver: false,
   victory: false,
+  failureReason: "",
+  victoryReason: "",
   waveTimer: 0,
   missionClock: 0,
   wavesRemaining: 0,
@@ -814,6 +817,8 @@ function resetGame() {
   state.messageTimer = 4;
   state.gameOver = false;
   state.victory = false;
+  state.failureReason = "";
+  state.victoryReason = "";
   state.paused = false;
   state.hitMarkerTimer = 0;
   state.killMarkerTimer = 0;
@@ -895,6 +900,7 @@ function updateHud() {
       ? `자료 회수 / ${objectiveDistance}m`
       : `탈출 지점으로 복귀 / ${objectiveDistance}m`;
   if (phaseTextEl) phaseTextEl.textContent = getPhaseGuideText();
+  if (phaseDetailTextEl) phaseDetailTextEl.textContent = getPhaseDetailText();
   if (interactHintEl) interactHintEl.textContent = getInteractHint();
   commandTextEl.textContent =
     state.squadCommand === "follow" ? "집결" : state.squadCommand === "hold" ? "고정" : "돌격";
@@ -1017,6 +1023,20 @@ function getPhaseGuideText() {
   if (state.objectivePhase === "disableJammer") return "1단계 · 교란기를 찾아 파괴하라";
   if (state.objectivePhase === "retrieve") return "2단계 · 확보한 구역에서 정보 자료를 회수하라";
   return "3단계 · 탈출 지점까지 분대를 생존시켜 복귀하라";
+}
+
+function getPhaseDetailText() {
+  if (state.selectedMission === "outpostDefense") {
+    return "전초기지를 끝까지 유지하고 남은 증원 웨이브를 모두 버텨야 합니다.";
+  }
+  if (state.selectedMission === "reconSweep") {
+    if (state.objectivePhase === "reconAlpha") return "첫 정찰 지점을 확보해 적 배치와 접근 경로를 파악하십시오.";
+    if (state.objectivePhase === "reconBravo") return "두 번째 정찰 지점까지 이동해 수집을 완료하십시오.";
+    return "수집한 정보를 잃지 않도록 분대를 생존시켜 탈출 지점으로 복귀하십시오.";
+  }
+  if (state.objectivePhase === "disableJammer") return "교란기를 먼저 파괴해야 자료 확보와 탈출 경로가 안전해집니다.";
+  if (state.objectivePhase === "retrieve") return "교전보다 정보 자료 확보가 우선입니다. 엄폐와 분대 명령을 활용하십시오.";
+  return "잔존 적과 시야를 확인하며 탈출 지점까지 안전하게 복귀하십시오.";
 }
 
 function getInteractHint() {
@@ -1935,6 +1955,7 @@ function handleInteract() {
     }
     if (state.objectivePhase === "extract" && state.extraction && Math.hypot(p.x - state.extraction.x, p.y - state.extraction.y) < 48) {
       state.victory = true;
+      state.victoryReason = "두 정찰 지점의 정보를 확보하고 분대가 무사히 복귀했습니다.";
       if (!state.stats.finishedAt) state.stats.finishedAt = performance.now();
       setMessage("정찰 성공! 수집한 정보를 회수했다", 10);
       triggerEventBanner("정찰 임무 완수", "#b8ffbe", 3.2);
@@ -1970,6 +1991,7 @@ function handleInteract() {
 
   if (state.objectivePhase === "extract" && Math.hypot(p.x - state.extraction.x, p.y - state.extraction.y) < 48) {
     state.victory = true;
+    state.victoryReason = "핵심 정보를 확보한 뒤 분대를 생존시켜 탈출에 성공했습니다.";
     if (!state.stats.finishedAt) state.stats.finishedAt = performance.now();
     setMessage("작전 성공! 분대가 임무를 완수했다", 10);
     triggerEventBanner("임무 완수", "#b8ffbe", 3.2);
@@ -1980,12 +2002,14 @@ function checkGameState() {
   if (state.player.hp <= 0) {
     state.player.hp = 0;
     state.gameOver = true;
+    state.failureReason = "분대장이 전사하여 더 이상 작전을 지속할 수 없습니다.";
     if (!state.stats.finishedAt) state.stats.finishedAt = performance.now();
     setMessage("작전 실패. 재정비 후 다시 투입하라", 10);
   }
   if (state.selectedMission === "outpostDefense") {
     if (state.missionClock <= 0) {
       state.victory = true;
+      state.victoryReason = "전초기지를 끝까지 방어하며 모든 증원 웨이브를 버텼습니다.";
       if (!state.stats.finishedAt) state.stats.finishedAt = performance.now();
       setMessage("방어 성공! 전초기지를 지켜냈다", 10);
     }
@@ -3104,13 +3128,16 @@ function drawOverlay() {
   }
   ctx.fillText(state.victory ? "작전 성공" : "작전 실패", WIDTH / 2, HEIGHT / 2 - 12);
   ctx.font = "18px sans-serif";
+  ctx.fillStyle = state.victory ? "#d9ffd0" : "#ffd0d0";
+  ctx.fillText(state.victory ? (state.victoryReason || "임무 목적을 달성했습니다.") : (state.failureReason || "작전을 계속할 수 없습니다."), WIDTH / 2, HEIGHT / 2 + 14);
+  ctx.fillStyle = "#fff";
   ctx.fillText(`작전 등급: ${getResultGrade()}`, WIDTH / 2, HEIGHT / 2 + 24);
   ctx.fillText(
     `처치 ${state.stats.kills} / 명중 ${state.stats.hits} / 발사 ${state.stats.shots} / 구조 ${state.stats.revives} / ${getElapsedSeconds()}초`,
     WIDTH / 2,
-    HEIGHT / 2 + 52
+    HEIGHT / 2 + 56
   );
-  ctx.fillText("상단 재시작 버튼으로 다시 시작할 수 있습니다.", WIDTH / 2, HEIGHT / 2 + 84);
+  ctx.fillText("상단 재시작 버튼으로 다시 시작할 수 있습니다.", WIDTH / 2, HEIGHT / 2 + 88);
   ctx.textAlign = "left";
 }
 
