@@ -544,6 +544,10 @@ function createUnit(x, y, team, role, opts = {}) {
     lastKnownTargetX: x,
     lastKnownTargetY: y,
     searchTimer: 0,
+    hitFlash: 0,
+    hitScale: 0,
+    deathTimer: 0,
+    deathTilt: 0,
   };
   if (team === "player") {
     unit.maxHp = Math.round(unit.maxHp * difficulty.playerHp);
@@ -1670,6 +1674,9 @@ function updateEnemy(enemy, dt) {
 
 function updateUnitsCooldowns(units, dt) {
   units.forEach((u) => {
+    u.hitFlash = Math.max(0, u.hitFlash - dt * 3.2);
+    u.hitScale = Math.max(0, u.hitScale - dt * 5.2);
+    if (u.deathTimer > 0) u.deathTimer = Math.max(0, u.deathTimer - dt);
     if (u.downed) return;
     u.cooldown = Math.max(0, u.cooldown - dt);
     u.skillCooldown = Math.max(0, u.skillCooldown - dt);
@@ -1704,6 +1711,8 @@ function updateBullets(dt) {
       if (t.hp <= 0 || t.downed) continue;
       if (Math.hypot(b.x - t.x, b.y - t.y) <= t.radius) {
         t.hp -= b.damage;
+        t.hitFlash = Math.max(t.hitFlash, 0.85);
+        t.hitScale = Math.max(t.hitScale, 1);
         if (b.team === "player") {
           state.stats.hits += 1;
           state.hitMarkerTimer = 0.12;
@@ -1720,6 +1729,8 @@ function updateBullets(dt) {
         }
         if (t.team === "enemy" && t.hp <= 0 && b.team === "player") {
           state.stats.kills += 1;
+          t.deathTimer = 0.7;
+          t.deathTilt = (Math.random() < 0.5 ? -1 : 1) * (0.8 + Math.random() * 0.35);
           state.killMarkerTimer = 0.24;
           state.killBannerTimer = 0.75;
           state.killBannerText = `${classConfigs[t.role]?.label || "적"} 처치`;
@@ -2202,37 +2213,52 @@ function drawTerrain() {
 }
 
 function drawUnit(unit) {
-  if (unit.hp <= 0 && !unit.downed) return;
+  const isCorpse = unit.hp <= 0 && !unit.downed;
+  if (isCorpse && unit.deathTimer <= 0) return;
   const visibleEnemy = unit.team === "enemy" ? isVisibleToSquad(unit) : false;
-  if (unit.team === "enemy" && !visibleEnemy) return;
+  if (unit.team === "enemy" && !visibleEnemy && !isCorpse) return;
   const sx = unit.x - state.camera.x;
   const sy = unit.y - state.camera.y;
+  const pulseScale = 1 + unit.hitScale * 0.1;
+  const bodyAlpha = isCorpse ? Math.max(0.18, unit.deathTimer / 0.7) : 1;
+  const corpseTilt = isCorpse ? unit.deathTilt || 1 : 0;
 
-  ctx.fillStyle = "rgba(0,0,0,0.28)";
+  ctx.fillStyle = isCorpse ? `rgba(90,0,0,${0.12 * bodyAlpha})` : "rgba(0,0,0,0.28)";
   ctx.beginPath();
-  ctx.ellipse(sx, sy + unit.radius + 5, unit.radius + 5, unit.radius * 0.75, 0, 0, Math.PI * 2);
+  ctx.ellipse(sx, sy + unit.radius + 5, unit.radius + 5 + unit.hitScale * 2, unit.radius * 0.75, 0, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.save();
   ctx.translate(sx, sy);
-  ctx.rotate(unit.angle);
+  ctx.rotate(unit.angle + corpseTilt);
+  ctx.scale(pulseScale, pulseScale);
+  ctx.globalAlpha = bodyAlpha;
 
-  ctx.fillStyle = unit.downed ? "#9aa4a0" : unit.color;
+  if (unit.hitFlash > 0 && !isCorpse) {
+    ctx.fillStyle = unit.team === "enemy" ? "#ffd1d1" : "#f4ffd2";
+  } else if (isCorpse) {
+    ctx.fillStyle = "#7d6262";
+  } else {
+    ctx.fillStyle = unit.downed ? "#9aa4a0" : unit.color;
+  }
   ctx.beginPath();
   ctx.roundRect(-7, -10, 14, 20, 5);
   ctx.fill();
 
-  ctx.fillStyle = unit.team === "enemy" ? "#3d2a2a" : "#253229";
+  ctx.fillStyle = isCorpse ? "#473434" : unit.team === "enemy" ? "#3d2a2a" : "#253229";
   ctx.beginPath();
   ctx.arc(-1, -6, unit.radius * 0.65, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = unit.team === "enemy" ? "#5e4747" : "#131c14";
+  ctx.fillStyle = isCorpse ? "#3b2d2d" : unit.team === "enemy" ? "#5e4747" : "#131c14";
   ctx.fillRect(2, -3, unit.radius + 11, 6);
   ctx.fillRect(-6, 7, 4, 8);
   ctx.fillRect(2, 7, 4, 8);
 
-  if (unit.team === "enemy") {
+  if (isCorpse) {
+    ctx.fillStyle = `rgba(255,120,120,${0.35 * bodyAlpha})`;
+    ctx.fillRect(-5, -1, 10, 4);
+  } else if (unit.team === "enemy") {
     ctx.fillStyle = "rgba(255,115,115,0.82)";
     ctx.fillRect(-5, -1, 10, 4);
   } else {
@@ -2253,22 +2279,22 @@ function drawUnit(unit) {
       ctx.fill();
     }
   } else {
-    ctx.strokeStyle = "rgba(255,120,120,0.95)";
+    ctx.strokeStyle = unit.hitFlash > 0 && !isCorpse ? "rgba(255,235,235,0.98)" : "rgba(255,120,120,0.95)";
     ctx.lineWidth = 2.5;
     ctx.beginPath();
     ctx.arc(0, 0, unit.radius + 3, 0, Math.PI * 2);
     ctx.stroke();
-    ctx.fillStyle = "rgba(255,90,90,0.18)";
+    ctx.fillStyle = isCorpse ? `rgba(140,20,20,${0.16 * bodyAlpha})` : "rgba(255,90,90,0.18)";
     ctx.beginPath();
-    ctx.arc(0, 0, unit.radius + 8, 0, Math.PI * 2);
+    ctx.arc(0, 0, unit.radius + 8 + unit.hitScale * 4, 0, Math.PI * 2);
     ctx.fill();
   }
 
   ctx.restore();
 
-  if (visibleEnemy) {
+  if (visibleEnemy && !isCorpse) {
     ctx.save();
-    ctx.strokeStyle = "rgba(255,90,90,0.98)";
+    ctx.strokeStyle = unit.hitFlash > 0 ? "rgba(255,240,240,0.98)" : "rgba(255,90,90,0.98)";
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(sx - 9, sy - unit.radius - 14);
@@ -2282,10 +2308,20 @@ function drawUnit(unit) {
     ctx.restore();
   }
 
+  if (unit.hitFlash > 0) {
+    ctx.save();
+    ctx.globalAlpha = Math.min(0.45, unit.hitFlash * 0.5);
+    ctx.fillStyle = unit.team === "enemy" ? "#ffd8d8" : "#f4ffd2";
+    ctx.beginPath();
+    ctx.arc(sx, sy, unit.radius + 12 + unit.hitScale * 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
   ctx.fillStyle = "rgba(0,0,0,0.55)";
   ctx.fillRect(sx - 16, sy - 24, 32, 5);
   ctx.fillStyle = unit.team === "enemy" ? "#ff7474" : "#86e886";
-  ctx.fillRect(sx - 16, sy - 24, 32 * (unit.hp / unit.maxHp), 5);
+  ctx.fillRect(sx - 16, sy - 24, 32 * Math.max(0, unit.hp / unit.maxHp), 5);
 }
 
 function drawObjectives() {
