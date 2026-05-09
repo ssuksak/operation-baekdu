@@ -419,6 +419,7 @@ const state = {
   screenFlashTimer: 0,
   screenFlashColor: "rgba(255,245,210,0.38)",
   playerDamageTimer: 0,
+  nearMissTimer: 0,
   eventBannerTimer: 0,
   eventBannerText: "",
   eventBannerColor: "#ffe082",
@@ -815,6 +816,7 @@ function resetGame() {
   state.screenFlashTimer = 0;
   state.screenFlashColor = "rgba(255,245,210,0.38)";
   state.playerDamageTimer = 0;
+  state.nearMissTimer = 0;
   state.eventBannerTimer = 0;
   state.eventBannerText = "";
   state.eventBannerColor = "#ffe082";
@@ -1097,30 +1099,44 @@ function shoot(shooter, angle) {
   const finalAngle = angle + (Math.random() - 0.5) * spread;
   const muzzleX = shooter.x + Math.cos(finalAngle) * (shooter.radius + 14);
   const muzzleY = shooter.y + Math.sin(finalAngle) * (shooter.radius + 14);
+  const ballisticProfile =
+    shooter.role === "heavy"
+      ? { speed: 430, trailLength: 220, tracerWidth: 6, coreRadius: 4.5, muzzleLife: 0.1 }
+      : shooter.role === "marksman"
+      ? { speed: 560, trailLength: 260, tracerWidth: 4, coreRadius: 3, muzzleLife: 0.06 }
+      : shooter.role === "grenadier"
+      ? { speed: 440, trailLength: 170, tracerWidth: 4, coreRadius: 3.8, muzzleLife: 0.08 }
+      : { speed: 450, trailLength: 180, tracerWidth: 5, coreRadius: 4, muzzleLife: 0.08 };
   state.bullets.push({
     x: muzzleX,
     y: muzzleY,
-    vx: Math.cos(finalAngle) * (shooter.role === "marksman" ? 520 : 450),
-    vy: Math.sin(finalAngle) * (shooter.role === "marksman" ? 520 : 450),
+    vx: Math.cos(finalAngle) * ballisticProfile.speed,
+    vy: Math.sin(finalAngle) * ballisticProfile.speed,
     team: shooter.team,
     damage: shooter.damage,
     life: 1.7,
+    trailLength: ballisticProfile.trailLength,
+    tracerWidth: ballisticProfile.tracerWidth,
+    coreRadius: ballisticProfile.coreRadius,
+    nearMissed: false,
   });
   state.effects.push({
     kind: "muzzle",
     x: muzzleX,
     y: muzzleY,
     angle: finalAngle,
-    life: 0.08,
+    life: ballisticProfile.muzzleLife,
+    scale: shooter.role === "heavy" ? 1.25 : shooter.role === "marksman" ? 0.8 : 1,
     color: shooter.team === "enemy" ? "#ffb2a0" : "#ffe7a0",
   });
   state.effects.push({
     kind: "tracer",
     x1: muzzleX,
     y1: muzzleY,
-    x2: muzzleX + Math.cos(finalAngle) * 180,
-    y2: muzzleY + Math.sin(finalAngle) * 180,
+    x2: muzzleX + Math.cos(finalAngle) * ballisticProfile.trailLength,
+    y2: muzzleY + Math.sin(finalAngle) * ballisticProfile.trailLength,
     life: 0.28,
+    width: ballisticProfile.tracerWidth,
     color: shooter.team === "enemy" ? "#ff9e9e" : "#fff1a6",
   });
   if (shooter === state.player) updateHud();
@@ -1696,6 +1712,13 @@ function updateBullets(dt) {
     b.x += b.vx * dt;
     b.y += b.vy * dt;
     b.life -= dt;
+    if (b.team === "enemy" && !b.nearMissed && state.player.hp > 0) {
+      const d = Math.hypot(b.x - state.player.x, b.y - state.player.y);
+      if (d > state.player.radius + 8 && d < 42) {
+        b.nearMissed = true;
+        state.nearMissTimer = Math.max(state.nearMissTimer, 0.14);
+      }
+    }
   });
 
   state.bullets = state.bullets.filter((b) => {
@@ -1959,6 +1982,7 @@ function update(dt) {
   if (state.killMarkerTimer > 0) state.killMarkerTimer = Math.max(0, state.killMarkerTimer - dt);
   if (state.killBannerTimer > 0) state.killBannerTimer = Math.max(0, state.killBannerTimer - dt);
   if (state.playerDamageTimer > 0) state.playerDamageTimer = Math.max(0, state.playerDamageTimer - dt);
+  if (state.nearMissTimer > 0) state.nearMissTimer = Math.max(0, state.nearMissTimer - dt);
   if (state.eventBannerTimer > 0) state.eventBannerTimer = Math.max(0, state.eventBannerTimer - dt);
   if (state.recoilKick > 0) state.recoilKick = Math.max(0, state.recoilKick - dt * 3.4);
   if (state.cameraShakeTimer > 0) state.cameraShakeTimer = Math.max(0, state.cameraShakeTimer - dt);
@@ -2420,15 +2444,15 @@ function drawBullets() {
     const sx = b.x - state.camera.x;
     const sy = b.y - state.camera.y;
     ctx.strokeStyle = b.team === "enemy" ? "rgba(255,140,140,0.95)" : "rgba(255,240,150,0.95)";
-    ctx.lineWidth = state.performanceMode ? 2 : 3;
+    ctx.lineWidth = state.performanceMode ? Math.max(2, (b.tracerWidth || 3) - 2) : b.tracerWidth || 3;
     ctx.beginPath();
-    ctx.moveTo(sx - Math.cos(angle) * 14, sy - Math.sin(angle) * 14);
+    ctx.moveTo(sx - Math.cos(angle) * (b.trailLength ? Math.min(26, b.trailLength * 0.08) : 14), sy - Math.sin(angle) * (b.trailLength ? Math.min(26, b.trailLength * 0.08) : 14));
     ctx.lineTo(sx, sy);
     ctx.stroke();
     if (state.performanceMode) return;
     ctx.fillStyle = b.team === "enemy" ? "#ff9e9e" : "#fff5a5";
     ctx.beginPath();
-    ctx.arc(sx, sy, 4, 0, Math.PI * 2);
+    ctx.arc(sx, sy, b.coreRadius || 4, 0, Math.PI * 2);
     ctx.fill();
   });
 }
@@ -2498,6 +2522,7 @@ function drawEffects() {
       ctx.translate(e.x - state.camera.x, e.y - state.camera.y);
       ctx.rotate(e.angle);
       ctx.globalAlpha = Math.max(0, e.life * 12);
+      ctx.scale(e.scale || 1, e.scale || 1);
       ctx.fillStyle = e.color;
       ctx.beginPath();
       ctx.moveTo(14, 0);
@@ -2515,14 +2540,14 @@ function drawEffects() {
       ctx.save();
       ctx.globalAlpha = Math.max(0, e.life * 6);
       ctx.strokeStyle = e.color;
-      ctx.lineWidth = lightweight ? 3 : 5;
+      ctx.lineWidth = lightweight ? Math.max(2, (e.width || 5) - 2) : e.width || 5;
       ctx.beginPath();
       ctx.moveTo(e.x1 - state.camera.x, e.y1 - state.camera.y);
       ctx.lineTo(e.x2 - state.camera.x, e.y2 - state.camera.y);
       ctx.stroke();
       if (!lightweight) {
       ctx.strokeStyle = "rgba(255,255,255,0.7)";
-      ctx.lineWidth = 2;
+      ctx.lineWidth = Math.max(1.2, (e.width || 5) * 0.4);
       ctx.beginPath();
       ctx.moveTo(e.x1 - state.camera.x, e.y1 - state.camera.y);
       ctx.lineTo(e.x2 - state.camera.x, e.y2 - state.camera.y);
@@ -2753,6 +2778,17 @@ function drawPlayerDamageVignette() {
   ctx.save();
   ctx.globalAlpha = Math.min(0.45, state.playerDamageTimer * 1.4);
   ctx.drawImage(damageVignetteCache.canvas, 0, 0, WIDTH, HEIGHT);
+  ctx.restore();
+}
+
+function drawNearMissCue() {
+  if (state.nearMissTimer <= 0) return;
+  const edge = ctx.createRadialGradient(WIDTH / 2, HEIGHT / 2, HEIGHT * 0.16, WIDTH / 2, HEIGHT / 2, HEIGHT * 0.72);
+  edge.addColorStop(0.7, "rgba(0,0,0,0)");
+  edge.addColorStop(1, `rgba(255,236,180,${Math.min(0.32, state.nearMissTimer * 1.8)})`);
+  ctx.save();
+  ctx.fillStyle = edge;
+  ctx.fillRect(0, 0, WIDTH, HEIGHT);
   ctx.restore();
 }
 
@@ -3061,6 +3097,7 @@ function render() {
   drawKillBanner();
   drawScreenFlash();
   drawPlayerDamageVignette();
+  drawNearMissCue();
   drawPerfStats();
   drawOverlay();
 }
