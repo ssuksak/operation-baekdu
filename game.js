@@ -882,6 +882,7 @@ function resetGame() {
   if (state.selectedMission === "reconSweep") {
     triggerEventBanner("정찰 소탕 · A/B 지점 확보 후 탈출", "#9fe7ff", 2.8);
   }
+  savePreferences();
   updateCamera();
   updateHud();
 }
