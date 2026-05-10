@@ -1482,6 +1482,32 @@ function findNearestCover(unit) {
   return best;
 }
 
+function findBestCoverAgainst(unit, target, maxDistance = 240) {
+  let best = null;
+  let bestScore = -Infinity;
+  state.cover.forEach((cover) => {
+    const cx = cover.x + cover.w / 2;
+    const cy = cover.y + cover.h / 2;
+    const distanceToUnit = Math.hypot(unit.x - cx, unit.y - cy);
+    if (distanceToUnit > maxDistance) return;
+
+    const angleToTarget = Math.atan2(target.y - cy, target.x - cx);
+    const escapeX = cx - Math.cos(angleToTarget) * (Math.max(cover.w, cover.h) * 0.45 + unit.radius + 6);
+    const escapeY = cy - Math.sin(angleToTarget) * (Math.max(cover.w, cover.h) * 0.45 + unit.radius + 6);
+    const distanceToTarget = Math.hypot(target.x - escapeX, target.y - escapeY);
+    const score =
+      (hasLineOfSight({ x: escapeX, y: escapeY }, target) ? -120 : 90) +
+      Math.max(0, 220 - distanceToUnit) * 0.35 +
+      Math.max(0, distanceToTarget - unit.preferredRange) * 0.08;
+
+    if (score > bestScore) {
+      bestScore = score;
+      best = { x: escapeX, y: escapeY, rect: cover, score };
+    }
+  });
+  return best;
+}
+
 function moveToward(unit, tx, ty, speedFactor, dt) {
   const angle = Math.atan2(ty - unit.y, tx - unit.x);
   unit.x += Math.cos(angle) * unit.speed * speedFactor * dt;
@@ -1726,9 +1752,12 @@ function updateEnemy(enemy, dt) {
     const d = dist(enemy, target);
     const lowHp = enemy.hp < enemy.maxHp * 0.4;
     const nearestCover = findNearestCover(enemy);
+    const tacticalCover = findBestCoverAgainst(enemy, target, enemy.role === "marksman" ? 320 : 250);
 
-    if (lowHp && nearestCover && d < 220) {
-      moveToward(enemy, nearestCover.x, nearestCover.y, 0.8, dt);
+    if ((lowHp || enemy.role === "marksman") && tacticalCover && d < 260) {
+      moveToward(enemy, tacticalCover.x, tacticalCover.y, enemy.role === "marksman" ? 0.62 : 0.82, dt);
+    } else if (enemy.role === "heavy" && tacticalCover && d > enemy.preferredRange - 20 && d < enemy.preferredRange + 80) {
+      moveToward(enemy, tacticalCover.x, tacticalCover.y, 0.42, dt);
     } else if (d > enemy.preferredRange + 10) {
       const flankOffset = enemy.role === "rifleman" ? (Math.sin(performance.now() * 0.001 + enemy.x) > 0 ? 42 : -42) : 0;
       moveToward(enemy, target.x + flankOffset, target.y - flankOffset * 0.3, 0.55, dt);
@@ -1747,8 +1776,8 @@ function updateEnemy(enemy, dt) {
       shoot(enemy, enemy.angle);
     }
 
-    if (enemy.role === "marksman" && nearestCover && d < 190) {
-      moveToward(enemy, nearestCover.x, nearestCover.y, 0.5, dt);
+    if (enemy.role === "marksman" && tacticalCover && d < 190) {
+      moveToward(enemy, tacticalCover.x, tacticalCover.y, 0.5, dt);
     }
   } else {
     const heardNoise = state.noiseBursts.find((noise) =>
@@ -1765,7 +1794,10 @@ function updateEnemy(enemy, dt) {
       enemy.alert = "search";
       const searchPoint = { x: enemy.lastKnownTargetX, y: enemy.lastKnownTargetY };
       const d = dist(enemy, searchPoint);
-      if (d > 18) {
+      const searchCover = findBestCoverAgainst(enemy, searchPoint, 180);
+      if (searchCover && d > 80) {
+        moveToward(enemy, searchCover.x, searchCover.y, 0.44, dt);
+      } else if (d > 18) {
         moveToward(enemy, searchPoint.x, searchPoint.y, 0.48, dt);
       } else {
         enemy.angle += dt * 1.8;
