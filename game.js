@@ -559,6 +559,7 @@ function createUnit(x, y, team, role, opts = {}) {
     lastKnownTargetX: x,
     lastKnownTargetY: y,
     searchTimer: 0,
+    flankDir: opts.flankDir || (Math.random() < 0.5 ? -1 : 1),
     hitFlash: 0,
     hitScale: 0,
     deathTimer: 0,
@@ -1753,13 +1754,17 @@ function updateEnemy(enemy, dt) {
     const lowHp = enemy.hp < enemy.maxHp * 0.4;
     const nearestCover = findNearestCover(enemy);
     const tacticalCover = findBestCoverAgainst(enemy, target, enemy.role === "marksman" ? 320 : 250);
+    const flankOffset = enemy.flankDir * (enemy.role === "rifleman" ? 78 : enemy.role === "grenadier" ? 54 : 0);
 
     if ((lowHp || enemy.role === "marksman") && tacticalCover && d < 260) {
       moveToward(enemy, tacticalCover.x, tacticalCover.y, enemy.role === "marksman" ? 0.62 : 0.82, dt);
     } else if (enemy.role === "heavy" && tacticalCover && d > enemy.preferredRange - 20 && d < enemy.preferredRange + 80) {
       moveToward(enemy, tacticalCover.x, tacticalCover.y, 0.42, dt);
+    } else if (enemy.role === "rifleman" && d > 120 && d < enemy.preferredRange + 120) {
+      moveToward(enemy, target.x + flankOffset, target.y - flankOffset * 0.35, 0.6, dt);
+    } else if (enemy.role === "grenadier" && d > 130 && d < 260) {
+      moveToward(enemy, target.x + flankOffset, target.y + flankOffset * 0.25, 0.46, dt);
     } else if (d > enemy.preferredRange + 10) {
-      const flankOffset = enemy.role === "rifleman" ? (Math.sin(performance.now() * 0.001 + enemy.x) > 0 ? 42 : -42) : 0;
       moveToward(enemy, target.x + flankOffset, target.y - flankOffset * 0.3, 0.55, dt);
     } else if (d < enemy.preferredRange - 28) {
       moveToward(enemy, enemy.x - Math.cos(enemy.angle) * 60, enemy.y - Math.sin(enemy.angle) * 60, 0.45, dt);
@@ -1772,6 +1777,9 @@ function updateEnemy(enemy, dt) {
     } else {
       if (enemy.role === "heavy") {
         enemy.cooldown = Math.max(enemy.cooldown - dt * 0.35, 0);
+        if (target === state.player && d > 90 && d < 240 && hasLineOfSight(enemy, target)) {
+          state.nearMissTimer = Math.max(state.nearMissTimer, 0.04);
+        }
       }
       shoot(enemy, enemy.angle);
     }
