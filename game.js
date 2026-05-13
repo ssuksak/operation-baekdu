@@ -1084,6 +1084,10 @@ function getMissionDisplayName() {
   return "정보 탈취";
 }
 
+function dismissMissionBriefing() {
+  state.missionBriefingTimer = 0;
+}
+
 function getInteractHint() {
   const p = state.player;
   const downedAlly = state.allies.find((ally) => ally.downed && dist(p, ally) < 42);
@@ -2115,6 +2119,23 @@ function update(dt) {
   updateProjectiles(dt);
   updateEffects(dt);
 
+  if (
+    state.missionBriefingTimer > 0 &&
+    (
+      input.fire ||
+      input.interact ||
+      input.touchAiming ||
+      input.up ||
+      input.down ||
+      input.left ||
+      input.right ||
+      Math.hypot(input.touchMoveX, input.touchMoveY) > 0.12 ||
+      (state.stats?.shots || 0) > 0
+    )
+  ) {
+    dismissMissionBriefing();
+  }
+
   if (state.selectedMission === "outpostDefense") {
     state.missionClock = Math.max(0, state.missionClock - dt);
     state.waveTimer -= dt;
@@ -3008,7 +3029,7 @@ function drawMissionBriefingCard() {
   ctx.font = "12px sans-serif";
   ctx.fillText(`보너스 목표 · ${getBonusObjectiveText()}`, WIDTH / 2, y + 102);
   ctx.fillStyle = "rgba(255,255,255,0.68)";
-  ctx.fillText("이 카드는 잠시 후 자동으로 사라집니다", WIDTH / 2, y + 118);
+  ctx.fillText("움직이거나 Enter를 누르면 바로 닫힙니다", WIDTH / 2, y + 118);
   ctx.restore();
   ctx.textAlign = "left";
 }
@@ -3410,6 +3431,11 @@ window.addEventListener("keydown", (e) => {
   if (e.key === "f" || e.key === "F") {
     e.preventDefault();
     toggleFullscreen();
+    return;
+  }
+  if (e.key === "Enter" && state.missionBriefingTimer > 0) {
+    e.preventDefault();
+    dismissMissionBriefing();
     return;
   }
   if (e.key === "j" || e.key === "J") {
