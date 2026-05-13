@@ -413,6 +413,7 @@ const state = {
   victory: false,
   failureReason: "",
   victoryReason: "",
+  missionBriefingTimer: 0,
   highAlertTriggered: false,
   anyAllyDowned: false,
   suppliesUsedCount: 0,
@@ -824,6 +825,7 @@ function resetGame() {
   state.victory = false;
   state.failureReason = "";
   state.victoryReason = "";
+  state.missionBriefingTimer = 5.2;
   state.highAlertTriggered = false;
   state.anyAllyDowned = false;
   state.suppliesUsedCount = 0;
@@ -1074,6 +1076,12 @@ function getBonusObjectiveText() {
   return getBonusObjectives()
     .map((bonus) => `${bonus.complete ? "✓" : "·"} ${bonus.label}`)
     .join(" / ");
+}
+
+function getMissionDisplayName() {
+  if (state.selectedMission === "outpostDefense") return "전초기지 방어";
+  if (state.selectedMission === "reconSweep") return "정찰 소탕";
+  return "정보 탈취";
 }
 
 function getInteractHint() {
@@ -2130,6 +2138,7 @@ function update(dt) {
   updateCamera();
 
   if (state.messageTimer > 0) state.messageTimer -= dt;
+  if (state.missionBriefingTimer > 0) state.missionBriefingTimer = Math.max(0, state.missionBriefingTimer - dt);
   if (state.hitMarkerTimer > 0) state.hitMarkerTimer = Math.max(0, state.hitMarkerTimer - dt);
   if (state.killMarkerTimer > 0) state.killMarkerTimer = Math.max(0, state.killMarkerTimer - dt);
   if (state.killBannerTimer > 0) state.killBannerTimer = Math.max(0, state.killBannerTimer - dt);
@@ -2971,6 +2980,39 @@ function drawTutorialCard() {
   ctx.restore();
 }
 
+function drawMissionBriefingCard() {
+  if (state.missionBriefingTimer <= 0 || state.gameOver || state.victory) return;
+  const alpha = Math.min(1, state.missionBriefingTimer * 0.85);
+  const w = 420;
+  const h = 128;
+  const x = WIDTH / 2 - w / 2;
+  const y = 118;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = "rgba(7, 12, 18, 0.84)";
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = "rgba(190,235,255,0.45)";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x, y, w, h);
+  ctx.fillStyle = "#d7f4ff";
+  ctx.font = "bold 16px sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText(`작전 브리핑 · ${getMissionDisplayName()}`, WIDTH / 2, y + 24);
+  ctx.fillStyle = "#edf8f1";
+  ctx.font = "14px sans-serif";
+  ctx.fillText(getPhaseGuideText(), WIDTH / 2, y + 50);
+  ctx.fillStyle = "rgba(230,245,255,0.82)";
+  ctx.font = "13px sans-serif";
+  ctx.fillText(getPhaseDetailText(), WIDTH / 2, y + 74);
+  ctx.fillStyle = "#ffe7a8";
+  ctx.font = "12px sans-serif";
+  ctx.fillText(`보너스 목표 · ${getBonusObjectiveText()}`, WIDTH / 2, y + 102);
+  ctx.fillStyle = "rgba(255,255,255,0.68)";
+  ctx.fillText("이 카드는 잠시 후 자동으로 사라집니다", WIDTH / 2, y + 118);
+  ctx.restore();
+  ctx.textAlign = "left";
+}
+
 function drawPerfStats() {
   if (!state.perfStatsVisible) return;
   const x = 18;
@@ -3305,6 +3347,7 @@ function render() {
   drawScreenFlash();
   drawPlayerDamageVignette();
   drawNearMissCue();
+  drawMissionBriefingCard();
   drawTutorialCard();
   drawPerfStats();
   drawOverlay();
